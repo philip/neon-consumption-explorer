@@ -28,6 +28,7 @@ export type PlanConfig = {
     computePerCUHour: number
     storagePerGBMonth: number
     instantRestorePerGBMonth: number
+    snapshotsPerGBMonth: number
     publicTransferPerGB: number
     privateTransferPerGB: number
     extraBranchesPerMonth: number
@@ -47,6 +48,8 @@ export type PlanConfig = {
     maxRestoreWindowDays: number
     /** Max PITR history size in GB-months. null = unlimited (pay per use on paid plans). */
     maxRestoreHistoryGBMonth: number | null
+    /** Manual snapshot limit. Scheduled backups don't count toward this on paid plans. */
+    maxManualSnapshots: number
   }
 }
 
@@ -59,6 +62,7 @@ export const PLANS: Record<Plan, PlanConfig> = {
       computePerCUHour: 0,
       storagePerGBMonth: 0,
       instantRestorePerGBMonth: 0,
+      snapshotsPerGBMonth: 0,
       publicTransferPerGB: 0,
       privateTransferPerGB: 0,
       extraBranchesPerMonth: 0,
@@ -71,6 +75,7 @@ export const PLANS: Record<Plan, PlanConfig> = {
       publicTransferGB: 5,
       maxRestoreWindowDays: 0.25,
       maxRestoreHistoryGBMonth: 1,
+      maxManualSnapshots: 1,
     },
   },
   launch: {
@@ -81,6 +86,7 @@ export const PLANS: Record<Plan, PlanConfig> = {
       computePerCUHour: 0.106,
       storagePerGBMonth: 0.35,
       instantRestorePerGBMonth: 0.20,
+      snapshotsPerGBMonth: 0.09,
       publicTransferPerGB: 0.10,
       privateTransferPerGB: 0,
       extraBranchesPerMonth: 1.50,
@@ -93,6 +99,7 @@ export const PLANS: Record<Plan, PlanConfig> = {
       publicTransferGB: 100,
       maxRestoreWindowDays: 7,
       maxRestoreHistoryGBMonth: null,
+      maxManualSnapshots: 10,
     },
   },
   scale: {
@@ -103,6 +110,7 @@ export const PLANS: Record<Plan, PlanConfig> = {
       computePerCUHour: 0.222,
       storagePerGBMonth: 0.35,
       instantRestorePerGBMonth: 0.20,
+      snapshotsPerGBMonth: 0.09,
       publicTransferPerGB: 0.10,
       privateTransferPerGB: 0.01,
       extraBranchesPerMonth: 1.50,
@@ -115,6 +123,7 @@ export const PLANS: Record<Plan, PlanConfig> = {
       publicTransferGB: 100,
       maxRestoreWindowDays: 30,
       maxRestoreHistoryGBMonth: null,
+      maxManualSnapshots: 10,
     },
   },
 }
