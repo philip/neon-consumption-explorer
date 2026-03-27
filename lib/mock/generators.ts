@@ -113,6 +113,7 @@ export function generateProjects(scenario: DemoScenario): Project[] {
       written_data_bytes: Math.round(rng() * (allowances.storageGBPerProject ?? 0.5) * 0.5 * 1e9),
       consumption_period_start: periodStart,
       consumption_period_end: periodEnd,
+      owner: { subscription_type: scenario.plan },
     }
   })
 }
