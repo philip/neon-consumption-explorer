@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { type ColumnDef } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
-import { formatBytes, formatActiveTime } from "@/lib/format"
+import { formatBytes, formatAvgCU } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { ArrowUpDown } from "lucide-react"
 import { DataTable } from "@/components/data-table"
@@ -78,13 +78,13 @@ function buildColumns(limits: Limits, queryString: string): ColumnDef<FreePlanPr
       ),
     },
     {
-      accessorKey: "activeTimeSeconds",
-      header: sortableHeader("Active Time"),
-      cell: ({ row }) => (
-        <span className="font-mono text-xs">
-          {formatActiveTime(row.original.activeTimeSeconds)}
-        </span>
-      ),
+      id: "avgCU",
+      header: "Avg CU",
+      cell: ({ row }) => {
+        const { computeHours, activeTimeSeconds } = row.original
+        const label = formatAvgCU(computeHours * 3600, activeTimeSeconds)
+        return <span className="font-mono text-xs">{label ?? "—"}</span>
+      },
     },
     {
       accessorKey: "storageBytes",

@@ -63,8 +63,6 @@ export type MetricDef = {
   calculateCost: (periodTotal: number, plan: Plan) => number
   /** Primary display value for dashboard MetricCards (billing unit). */
   formatDisplayValue: (value: number, hoursInPeriod: number) => string
-  /** Optional subtitle for dashboard MetricCards (e.g. average size context). */
-  formatSubtitle?: (value: number, hoursInPeriod: number) => string
   /** Format the accumulated period-total for cost breakdown tables */
   formatValue: (value: number) => string
   /**

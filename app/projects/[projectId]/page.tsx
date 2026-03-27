@@ -38,7 +38,26 @@ export default async function ProjectDetailPage({
   const { orgId } = await resolveOrg(sp.org)
 
   const projectResult = await getProject(projectId)
-  const subType = projectResult.data?.project?.owner?.subscription_type
+
+  if (projectResult.error) {
+    const qs = new URLSearchParams()
+    if (orgId) qs.set("org", orgId)
+    const backHref = `/projects${qs.size > 0 ? `?${qs}` : ""}`
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-20">
+        <p className="text-muted-foreground">
+          Could not load project <span className="font-mono">{projectId}</span>.
+          It may not exist or your API key may not have access.
+        </p>
+        <a href={backHref} className="text-sm text-primary hover:underline">
+          Back to projects
+        </a>
+      </div>
+    )
+  }
+
+  const project = projectResult.data?.project
+  const subType = project?.owner?.subscription_type
   const plan = subType ? normalizePlan(subType) : null
   const isFree = plan === "free"
 
@@ -72,7 +91,12 @@ export default async function ProjectDetailPage({
           </Suspense>
 
           <Suspense fallback={<Skeleton className="h-48 w-full" />}>
-            <CostBreakdown projectId={projectId} orgId={orgId} range={range} />
+            <CostBreakdown
+              projectId={projectId}
+              orgId={orgId}
+              range={range}
+              activeTimeSeconds={project?.active_time_seconds}
+            />
           </Suspense>
         </>
       ) : null}

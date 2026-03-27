@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 import { searchParamsCache } from "@/lib/search-params"
-import { getActiveProjectsConsumption } from "@/lib/api"
+import { getActiveProjectsConsumption, getProjects } from "@/lib/api"
 import { resolveOrg } from "@/lib/org"
 import { detectPlanFromConsumption } from "@/lib/pricing"
 import type { Plan } from "@/lib/plans"
@@ -20,7 +20,17 @@ export const metadata: Metadata = {
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>
 
-async function GuideContent({ orgId, month }: { orgId: string; month: string | null }) {
+async function GuideContent({
+  orgId,
+  month,
+  availableMonths,
+  currentMonthValue,
+}: {
+  orgId: string
+  month: string | null
+  availableMonths: { value: string; label: string }[]
+  currentMonthValue: string
+}) {
   const billingPeriod = parseBillingMonth(month)
   const consumptionResult = await getActiveProjectsConsumption({
     orgId,
@@ -57,12 +67,25 @@ async function GuideContent({ orgId, month }: { orgId: string; month: string | n
       </Card>
 
       {isPaid ? (
-        <PaidPlanGuide projects={consumptionProjects} plan={plan} billingPeriod={billingPeriod} />
+        <>
+          <BillingPeriodPicker months={availableMonths} currentMonth={currentMonthValue} />
+          <PaidPlanGuide
+            projects={consumptionProjects}
+            plan={plan}
+            billingPeriod={billingPeriod}
+            totalActiveSeconds={billingPeriod.isCurrentMonth ? await getTotalActiveSeconds(orgId) : null}
+          />
+        </>
       ) : (
         <FreePlanGuide orgId={orgId} />
       )}
     </div>
   )
+}
+
+async function getTotalActiveSeconds(orgId: string): Promise<number> {
+  const result = await getProjects({ orgId })
+  return (result.data?.projects ?? []).reduce((sum, p) => sum + (p.active_time ?? 0), 0)
 }
 
 export default async function GuidePage({ searchParams }: { searchParams: SearchParams }) {
@@ -99,8 +122,6 @@ export default async function GuidePage({ searchParams }: { searchParams: Search
         </p>
       </div>
 
-      <BillingPeriodPicker months={availableMonths} currentMonth={currentMonthValue} />
-
       <Suspense
         key={currentMonthValue + orgId}
         fallback={
@@ -111,7 +132,12 @@ export default async function GuidePage({ searchParams }: { searchParams: Search
           </div>
         }
       >
-        <GuideContent orgId={orgId} month={month} />
+        <GuideContent
+          orgId={orgId}
+          month={month}
+          availableMonths={availableMonths}
+          currentMonthValue={currentMonthValue}
+        />
       </Suspense>
     </div>
   )

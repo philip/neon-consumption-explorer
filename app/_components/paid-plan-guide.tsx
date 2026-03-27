@@ -2,6 +2,7 @@ import {
   formatBytes,
   formatCurrency,
   formatCUHours,
+  formatAvgCU,
   formatGBMonths,
   formatBranchHours,
   formatBranchMonths,
@@ -14,7 +15,6 @@ import {
   calculatePrivateTransferCost,
   calculateExtraBranchesCost,
   billableBranchHours,
-  byteHoursToAvgBytes,
 } from "@/lib/pricing"
 import { getPlan, type Plan } from "@/lib/plans"
 import type { BillingPeriod } from "@/lib/billing-period"
@@ -28,10 +28,12 @@ export function PaidPlanGuide({
   projects,
   plan,
   billingPeriod,
+  totalActiveSeconds,
 }: {
   projects: ProjectConsumption[]
   plan: Plan
   billingPeriod: BillingPeriod
+  totalActiveSeconds: number | null
 }) {
   const planConfig = getPlan(plan)
   const pricing = planConfig.rates
@@ -44,12 +46,10 @@ export function PaidPlanGuide({
   let privateTransfer = 0
   let totalBillableBranchHours = 0
   let totalBranchHours = 0
-  const uniqueDays = new Set<string>()
 
   for (const project of projects) {
     for (const period of project.periods) {
       for (const day of period.consumption) {
-        uniqueDays.add(day.timeframe_start)
         let dailyBH = 0
         for (const m of day.metrics) {
           switch (m.metric_name) {
@@ -82,8 +82,9 @@ export function PaidPlanGuide({
     }
   }
 
-  const hoursInPeriod = uniqueDays.size * 24
-
+  const avgCU = totalActiveSeconds != null
+    ? formatAvgCU(computeSeconds, totalActiveSeconds)
+    : null
   const computeCost = calculateComputeCost(computeSeconds, plan)
   const rootStorageCost = calculateStorageCost(rootStorageBH, plan)
   const childStorageCost = calculateStorageCost(childStorageBH, plan)
@@ -123,7 +124,7 @@ granularity=${billingPeriod.granularity}`
           title="Compute"
           apiField="compute_unit_seconds"
           rawValue={`${computeSeconds.toLocaleString()} seconds`}
-          interpretation={formatCUHours(computeSeconds)}
+          interpretation={avgCU ? `${formatCUHours(computeSeconds)} (${avgCU})` : formatCUHours(computeSeconds)}
           formula={[
             `API reports compute in CU-seconds (compute-unit seconds).`,
             `Convert to CU-hours: ${computeSeconds.toLocaleString()} s ÷ 3,600 = ${(computeSeconds / 3600).toFixed(2)} CU-hrs.`,
@@ -138,7 +139,7 @@ granularity=${billingPeriod.granularity}`
           title="Root Storage"
           apiField="root_branch_bytes_month"
           rawValue={`${rootStorageBH.toExponential(2)} byte-hours`}
-          interpretation={`${formatGBMonths(rootStorageBH)} (≈ ${formatBytes(byteHoursToAvgBytes(rootStorageBH, hoursInPeriod))} average size over the period)`}
+          interpretation={formatGBMonths(rootStorageBH)}
           formula={[
             `API reports storage as byte-hours (bytes stored × hours held).`,
             `Convert to GB-months: byte-hours ÷ 744 hrs ÷ 1,000,000,000 = ${formatGBMonths(rootStorageBH)}.`,
@@ -153,7 +154,7 @@ granularity=${billingPeriod.granularity}`
           title="Child Storage"
           apiField="child_branch_bytes_month"
           rawValue={`${childStorageBH.toExponential(2)} byte-hours`}
-          interpretation={`${formatGBMonths(childStorageBH)} (≈ ${formatBytes(byteHoursToAvgBytes(childStorageBH, hoursInPeriod))} average size over the period)`}
+          interpretation={formatGBMonths(childStorageBH)}
           formula={[
             `API reports child-branch storage as byte-hours (bytes stored × hours held).`,
             `Convert to GB-months: byte-hours ÷ 744 hrs ÷ 1,000,000,000 = ${formatGBMonths(childStorageBH)}.`,
@@ -168,7 +169,7 @@ granularity=${billingPeriod.granularity}`
           title="PITR / Instant Restore"
           apiField="instant_restore_bytes_month"
           rawValue={`${pitrBH.toExponential(2)} byte-hours`}
-          interpretation={`${formatGBMonths(pitrBH)} (≈ ${formatBytes(byteHoursToAvgBytes(pitrBH, hoursInPeriod))} average size over the period)`}
+          interpretation={formatGBMonths(pitrBH)}
           formula={[
             `API reports PITR history as byte-hours (bytes retained × hours held).`,
             `Convert to GB-months: byte-hours ÷ 744 hrs ÷ 1,000,000,000 = ${formatGBMonths(pitrBH)}.`,

@@ -103,11 +103,14 @@ export function generateProjects(scenario: DemoScenario): Project[] {
       ? (spend * (weights.publicTransfer ?? 0) / rates.publicTransferPerGB) * 1e9
       : (0.1 + rng() * 0.5) * (allowances.publicTransferGB / scenario.projectCount) * 1e9
 
+    const activeRatio = 0.4 + rng() * 0.5
+
     return {
       id,
       name,
       compute_time_seconds: Math.round(computeSeconds),
-      active_time_seconds: Math.round(computeSeconds * 0.6),
+      active_time: Math.round(computeSeconds * activeRatio),
+      active_time_seconds: Math.round(computeSeconds * activeRatio),
       data_storage_bytes_hour: Math.round(storageBH),
       data_transfer_bytes: Math.round(transferBytes),
       written_data_bytes: Math.round(rng() * (allowances.storageGBPerProject ?? 0.5) * 0.5 * 1e9),

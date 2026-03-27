@@ -1,5 +1,5 @@
 import { getProjects, getProjectBranches, getProjectSnapshots } from "@/lib/api"
-import { formatBytes, formatBillingPeriod } from "@/lib/format"
+import { formatBytes, formatBillingPeriod, formatAvgCU } from "@/lib/format"
 import { BYTES_PER_GB } from "@/lib/pricing"
 import { getPlan } from "@/lib/plans"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -52,12 +52,15 @@ export async function FreePlanGuide({ orgId }: { orgId: string }) {
     }
   }
 
-  let maxComputeSeconds = 0
+  let totalComputeSeconds = 0
+  let totalActiveSeconds = 0
   let totalTransferBytes = 0
   for (const s of snapshots) {
-    maxComputeSeconds = Math.max(maxComputeSeconds, s.computeTimeSeconds)
+    totalComputeSeconds += s.computeTimeSeconds
+    totalActiveSeconds += s.activeTimeSeconds
     totalTransferBytes += s.dataTransferBytes
   }
+  const orgAvgCU = formatAvgCU(totalComputeSeconds, totalActiveSeconds)
 
   const allowances = getPlan("free").allowances
   const computeHoursLimit = allowances.computeCUHoursPerProject!
@@ -91,14 +94,14 @@ export async function FreePlanGuide({ orgId }: { orgId: string }) {
           )}
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <UsageBar
-              label="Compute Time (busiest project)"
-              used={maxComputeSeconds / 3600}
-              limit={computeHoursLimit}
-              formatUsed={`${(maxComputeSeconds / 3600).toFixed(1)} hrs`}
-              formatLimit={`${computeHoursLimit} hrs`}
-            />
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground">Compute Time</p>
+              <p className="text-sm font-mono">{(totalComputeSeconds / 3600).toFixed(1)} hrs</p>
+              <p className="text-xs text-muted-foreground">
+                {computeHoursLimit} hrs/project limit
+              </p>
+            </div>
             <UsageBar
               label="Data Transfer"
               used={totalTransferBytes}
@@ -113,6 +116,13 @@ export async function FreePlanGuide({ orgId }: { orgId: string }) {
               formatUsed={`${projects.length}`}
               formatLimit={`${allowances.projects}`}
             />
+            {orgAvgCU && (
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Avg Compute Size</p>
+                <p className="text-sm font-mono">{orgAvgCU}</p>
+                <p className="text-xs text-muted-foreground">across all projects</p>
+              </div>
+            )}
           </div>
           <p className="text-xs text-muted-foreground">
             Storage and branches are limited per project ({formatBytes(storagePerProjectBytes)} and {allowances.branchesPerProject} branches each).

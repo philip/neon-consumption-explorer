@@ -1,6 +1,6 @@
 import { computeTimeRange } from "@/lib/time-range"
 import { getConsumptionHistory } from "@/lib/api"
-import { formatCurrency, formatRate } from "@/lib/format"
+import { formatCurrency, formatRate, formatAvgCU } from "@/lib/format"
 import { detectPlanFromConsumption } from "@/lib/pricing"
 import { getPlan } from "@/lib/plans"
 import { METRICS } from "@/lib/metrics"
@@ -12,10 +12,12 @@ export async function CostBreakdown({
   projectId,
   orgId,
   range,
+  activeTimeSeconds,
 }: {
   projectId: string
   orgId: string
   range: "7d" | "30d" | "60d" | "12m"
+  activeTimeSeconds?: number
 }) {
   const timeRange = computeTimeRange(range)
   const result = await getConsumptionHistory({
@@ -33,20 +35,19 @@ export async function CostBreakdown({
   const project = projects[0]
   if (!project) return null
 
-  const { totals, dayCount } = aggregateProjectMetrics(project, plan)
+  const { totals } = aggregateProjectMetrics(project, plan)
   const { rates } = getPlan(plan)
-  const hoursInPeriod = dayCount * 24
+  const avgCU = activeTimeSeconds != null
+    ? formatAvgCU(totals.compute, activeTimeSeconds)
+    : null
 
-  const rows = METRICS.map((metric) => {
-    const primary = metric.formatValue(totals[metric.dailyKey])
-    const sub = metric.formatSubtitle?.(totals[metric.dailyKey], hoursInPeriod)
-    return {
-      label: metric.label,
-      value: sub ? `${primary} (${sub})` : primary,
-      cost: metric.calculateCost(totals[metric.dailyKey], plan),
-      rate: formatRate(rates[metric.rateKey], metric.rateUnit),
-    }
-  })
+  const rows = METRICS.map((metric) => ({
+    label: metric.label,
+    value: metric.formatValue(totals[metric.dailyKey]),
+    subtitle: metric.dailyKey === "compute" ? avgCU : null,
+    cost: metric.calculateCost(totals[metric.dailyKey], plan),
+    rate: formatRate(rates[metric.rateKey], metric.rateUnit),
+  }))
 
   const totalCost = rows.reduce((sum, r) => sum + r.cost, 0)
 
@@ -74,7 +75,12 @@ export async function CostBreakdown({
                       <span className="ml-1.5 text-xs text-muted-foreground">({row.rate})</span>
                     )}
                   </td>
-                  <td className="py-1.5 text-right font-mono text-xs">{row.value ?? "—"}</td>
+                  <td className="py-1.5 text-right font-mono text-xs">
+                    {row.value ?? "—"}
+                    {row.subtitle && (
+                      <span className="ml-1.5 text-muted-foreground">({row.subtitle})</span>
+                    )}
+                  </td>
                   <td className="py-1.5 text-right font-mono">{formatCurrency(row.cost)}</td>
                 </tr>
               ))}

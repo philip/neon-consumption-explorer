@@ -60,6 +60,18 @@ export function formatActiveTime(seconds: number): string {
   return `${hours.toFixed(1)} hrs`
 }
 
+/**
+ * Compute average CU size from compute CU-seconds and active wall-clock seconds.
+ * Returns null when active time is zero (no data / endpoint never ran).
+ */
+export function formatAvgCU(computeSeconds: number, activeSeconds: number): string | null {
+  if (activeSeconds === 0) return null
+  const cuHours = computeSeconds / 3600
+  const activeHours = activeSeconds / 3600
+  const avg = cuHours / activeHours
+  return `${avg.toFixed(2)} CU avg`
+}
+
 const MS_PER_DAY = 86_400_000
 
 /** Format a billing period as "Mar 1 – Apr 1 (day 5 of 31)". */

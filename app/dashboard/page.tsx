@@ -102,7 +102,6 @@ async function OverviewMetrics({
             key={metric.dailyKey}
             title={metric.label}
             value={metric.formatDisplayValue(totals[metric.totalsKey], hoursInPeriod)}
-            subtitle={metric.formatSubtitle?.(totals[metric.totalsKey], hoursInPeriod)}
             cost={formatCurrency(metric.calculateCost(totals[metric.totalsKey], plan))}
           />
         ))}
