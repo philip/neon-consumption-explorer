@@ -3,11 +3,13 @@ import { Suspense } from "react"
 import { searchParamsCache } from "@/lib/search-params"
 import { resolveOrg } from "@/lib/org"
 import { getProject } from "@/lib/api"
+import { normalizePlan } from "@/lib/plans"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ProjectHeader } from "@/app/projects/_components/project-header"
 import { ProjectTimeSeries } from "@/app/projects/_components/project-time-series"
 import { CostBreakdown } from "@/app/projects/_components/cost-breakdown"
+import { FreeConsumptionSummary } from "@/app/projects/_components/free-consumption-summary"
 import { BranchList } from "@/app/projects/_components/branch-list"
 
 type Params = Promise<{ projectId: string }>
@@ -35,6 +37,11 @@ export default async function ProjectDetailPage({
   const range = sp.range
   const { orgId } = await resolveOrg(sp.org)
 
+  const projectResult = await getProject(projectId)
+  const subType = projectResult.data?.project?.owner?.subscription_type
+  const plan = subType ? normalizePlan(subType) : null
+  const isFree = plan === "free"
+
   const qs = new URLSearchParams()
   if (orgId) qs.set("org", orgId)
   if (range && range !== "30d") qs.set("range", range)
@@ -46,25 +53,29 @@ export default async function ProjectDetailPage({
         <ProjectHeader projectId={projectId} queryString={queryString} />
       </Suspense>
 
-      {orgId && (
-        <Suspense
-          fallback={
-            <Card>
-              <CardContent className="py-4">
-                <Skeleton className="h-[350px] w-full" />
-              </CardContent>
-            </Card>
-          }
-        >
-          <ProjectTimeSeries projectId={projectId} orgId={orgId} range={range} />
-        </Suspense>
-      )}
-
-      {orgId && (
+      {isFree ? (
         <Suspense fallback={<Skeleton className="h-48 w-full" />}>
-          <CostBreakdown projectId={projectId} orgId={orgId} range={range} />
+          <FreeConsumptionSummary projectId={projectId} />
         </Suspense>
-      )}
+      ) : orgId ? (
+        <>
+          <Suspense
+            fallback={
+              <Card>
+                <CardContent className="py-4">
+                  <Skeleton className="h-[350px] w-full" />
+                </CardContent>
+              </Card>
+            }
+          >
+            <ProjectTimeSeries projectId={projectId} orgId={orgId} range={range} />
+          </Suspense>
+
+          <Suspense fallback={<Skeleton className="h-48 w-full" />}>
+            <CostBreakdown projectId={projectId} orgId={orgId} range={range} />
+          </Suspense>
+        </>
+      ) : null}
 
       <Suspense fallback={<Skeleton className="h-64 w-full" />}>
         <BranchList projectId={projectId} />

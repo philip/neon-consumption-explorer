@@ -1,6 +1,8 @@
 "use client"
 
 import { useMemo } from "react"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { type ColumnDef } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
 import { formatBytes, formatActiveTime } from "@/lib/format"
@@ -46,13 +48,19 @@ function sortableHeader(label: string) {
   }
 }
 
-function buildColumns(limits: Limits): ColumnDef<FreePlanProjectRow, unknown>[] {
+function buildColumns(limits: Limits, queryString: string): ColumnDef<FreePlanProjectRow, unknown>[] {
+  const qs = queryString ? `?${queryString}` : ""
   return [
     {
       accessorKey: "name",
       header: "Project",
       cell: ({ row }) => (
-        <span className="font-medium">{row.original.name}</span>
+        <Link
+          href={`/projects/${row.original.id}${qs}`}
+          className="font-medium text-primary hover:underline"
+        >
+          {row.original.name}
+        </Link>
       ),
     },
     {
@@ -125,7 +133,8 @@ export function FreePlanProjectTable({
   data: FreePlanProjectRow[]
   limits: Limits
 }) {
-  const columns = useMemo(() => buildColumns(limits), [limits])
+  const searchParams = useSearchParams()
+  const columns = useMemo(() => buildColumns(limits, searchParams.toString()), [limits, searchParams])
 
   return <DataTable columns={columns} data={data} emptyMessage="No projects found." />
 }

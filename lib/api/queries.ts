@@ -38,6 +38,7 @@ export type Project = {
   data_storage_bytes_hour?: number
   consumption_period_start?: string
   consumption_period_end?: string
+  owner?: { subscription_type?: string }
 }
 
 export type Branch = {
