@@ -156,9 +156,10 @@ export function generateConsumptionHistory(
   const { weights } = scenario
   const allowedBranches = getPlan(scenario.plan).allowances.branchesPerProject - 1
 
-  return filtered.map((proj, projIdx) => {
+  return filtered.map((proj) => {
+    const originalIndex = projects.findIndex((p) => p.id === proj.id)
     const rng = seededRandom(seedHash(proj.id + "-consumption"))
-    const share = distributeProjectShare(rng, scenario.projectCount, projIdx)
+    const share = distributeProjectShare(rng, scenario.projectCount, originalIndex)
     const projSpend = scenario.monthlySpend * share
     const fullMonthDays = getDaysInMonth(fromDate)
 

@@ -53,6 +53,17 @@ export function calculatePublicTransferCost(bytes: number, plan: Plan): number {
   return billableGB * config.rates.publicTransferPerGB
 }
 
+/**
+ * Per-project transfer cost without org-wide allowance deduction.
+ * A future improvement could use proportional attribution:
+ * (projectGB / orgTotalGB) × max(0, orgTotalGB - allowanceGB) × rate
+ */
+export function calculatePublicTransferCostRaw(bytes: number, plan: Plan): number {
+  const config = getPlan(plan)
+  const gb = bytes / BYTES_PER_GB
+  return gb * config.rates.publicTransferPerGB
+}
+
 export function calculatePrivateTransferCost(bytes: number, plan: Plan): number {
   const gb = bytes / BYTES_PER_GB
   return gb * getPlan(plan).rates.privateTransferPerGB
