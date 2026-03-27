@@ -5,15 +5,20 @@ import { computeTimeRange } from "@/lib/time-range"
 import {
   getConsumptionHistory,
   getProjects,
+  getProjectBranches,
   getProjectSnapshots,
   type ProjectSnapshot,
 } from "@/lib/api"
 import { resolveOrg } from "@/lib/org"
-import { byteHoursToAvgBytes, detectPlanFromConsumption } from "@/lib/pricing"
-import type { Plan } from "@/lib/plans"
+import { byteHoursToAvgBytes, detectPlanFromConsumption, BYTES_PER_GB } from "@/lib/pricing"
+import { getPlan, type Plan } from "@/lib/plans"
 import { METRICS } from "@/lib/metrics"
 import { aggregateProjectMetrics, type ProjectConsumption } from "@/lib/consumption"
 import { ProjectTable, type ProjectRow } from "@/components/project-table"
+import {
+  FreePlanProjectTable,
+  type FreePlanProjectRow,
+} from "@/components/free-plan-project-table"
 import { SectionError } from "@/components/section-error"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -70,9 +75,11 @@ async function ProjectsContent({
   }
 
   const projectNameMap = new Map<string, string>()
+  const projectActiveTimeMap = new Map<string, number>()
   const projectsList = projectsResult.data?.projects ?? []
   for (const p of projectsList) {
     projectNameMap.set(p.id, p.name)
+    projectActiveTimeMap.set(p.id, p.active_time ?? 0)
   }
 
   const consumptionProjects = consumptionResult.data?.projects ?? []
@@ -95,6 +102,56 @@ async function ProjectsContent({
     }
   }
 
+  if (plan === "free") {
+    const allowances = getPlan("free").allowances
+    const computeHoursLimit = allowances.computeCUHoursPerProject!
+    const storagePerProjectBytes = allowances.storageGBPerProject! * BYTES_PER_GB
+
+    const [snapshotResult, ...branchResults] = await Promise.all([
+      getProjectSnapshots(orgId),
+      ...projectsList.map(async (p) => {
+        const result = await getProjectBranches(p.id)
+        return { projectId: p.id, branches: result.data?.branches ?? [] }
+      }),
+    ])
+
+    const snapshotByProject = new Map<string, ProjectSnapshot>()
+    for (const s of snapshotResult.data ?? []) {
+      snapshotByProject.set(s.projectId, s)
+    }
+
+    const branchMap = new Map<string, { logical_size?: number }[]>()
+    for (const r of branchResults) {
+      branchMap.set(r.projectId, r.branches)
+    }
+
+    const freeRows: FreePlanProjectRow[] = projectsList.map((p) => {
+      const branches = branchMap.get(p.id) ?? []
+      const storage = branches.reduce((sum, b) => sum + (b.logical_size ?? 0), 0)
+      const snap = snapshotByProject.get(p.id)
+      return {
+        id: p.id,
+        name: p.name,
+        computeHours: (snap?.computeTimeSeconds ?? 0) / 3600,
+        activeTimeSeconds: snap?.activeTimeSeconds ?? p.active_time ?? 0,
+        storageBytes: storage,
+        transferBytes: snap?.dataTransferBytes ?? 0,
+        branchCount: branches.length,
+      }
+    })
+
+    return (
+      <FreePlanProjectTable
+        data={freeRows}
+        limits={{
+          computeHoursPerProject: computeHoursLimit,
+          storageBytesPerProject: storagePerProjectBytes,
+          branchesPerProject: allowances.branchesPerProject,
+        }}
+      />
+    )
+  }
+
   const allProjectIds = new Set([
     ...projectsList.map((p) => p.id),
     ...consumptionProjects.map((p) => p.project_id),
@@ -105,6 +162,7 @@ async function ProjectsContent({
       projectId,
       projectName: projectNameMap.get(projectId) ?? projectId,
       compute: 0,
+      activeTimeSeconds: projectActiveTimeMap.get(projectId) ?? 0,
       storageTotal: 0,
       publicTransfer: 0,
       privateTransfer: 0,

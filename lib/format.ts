@@ -53,6 +53,26 @@ export function formatGBMonths(byteHours: number): string {
   return `${gbMonths.toFixed(2)} GB-months`
 }
 
+/** Format wall-clock active time as hours or minutes. */
+export function formatActiveTime(seconds: number): string {
+  const hours = seconds / 3600
+  if (hours < 1) return `${Math.round(seconds / 60)} min`
+  return `${hours.toFixed(1)} hrs`
+}
+
+const MS_PER_DAY = 86_400_000
+
+/** Format a billing period as "Mar 1 – Apr 1 (day 5 of 31)". */
+export function formatBillingPeriod(start: string, end: string): string {
+  const startDate = new Date(start)
+  const endDate = new Date(end)
+  const now = new Date()
+  const daysElapsed = Math.max(1, Math.ceil((now.getTime() - startDate.getTime()) / MS_PER_DAY))
+  const daysInPeriod = Math.ceil((endDate.getTime() - startDate.getTime()) / MS_PER_DAY)
+  const fmt = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric" })
+  return `${fmt(startDate)} – ${fmt(endDate)} (day ${daysElapsed} of ${daysInPeriod})`
+}
+
 /**
  * Format a per-unit rate as a compact display string, e.g. "$0.35/GB-mo".
  * Returns null when the rate is zero (not charged on the plan).

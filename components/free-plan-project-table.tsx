@@ -3,7 +3,7 @@
 import { useMemo } from "react"
 import { type ColumnDef } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
-import { formatBytes } from "@/lib/format"
+import { formatBytes, formatActiveTime } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { ArrowUpDown } from "lucide-react"
 import { DataTable } from "@/components/data-table"
@@ -12,6 +12,7 @@ export type FreePlanProjectRow = {
   id: string
   name: string
   computeHours: number
+  activeTimeSeconds: number
   storageBytes: number
   branchCount: number
   transferBytes: number
@@ -65,6 +66,15 @@ function buildColumns(limits: Limits): ColumnDef<FreePlanProjectRow, unknown>[] 
           )}
         >
           {row.original.computeHours.toFixed(1)} hrs
+        </span>
+      ),
+    },
+    {
+      accessorKey: "activeTimeSeconds",
+      header: sortableHeader("Active Time"),
+      cell: ({ row }) => (
+        <span className="font-mono text-xs">
+          {formatActiveTime(row.original.activeTimeSeconds)}
         </span>
       ),
     },

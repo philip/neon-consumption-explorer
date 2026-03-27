@@ -31,6 +31,7 @@ export type Project = {
   id: string
   name: string
   compute_time_seconds?: number
+  active_time?: number
   active_time_seconds?: number
   data_transfer_bytes?: number
   written_data_bytes?: number

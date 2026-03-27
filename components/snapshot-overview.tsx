@@ -2,6 +2,8 @@ import { type ProjectSnapshot } from "@/lib/api"
 import {
   formatBytes,
   formatCUHours,
+  formatActiveTime,
+  formatBillingPeriod,
   formatStorageFromByteHours,
   formatGBMonths,
 } from "@/lib/format"
@@ -18,22 +20,22 @@ function computeSnapshotHoursInPeriod(snapshots: ProjectSnapshot[]): number {
 
 export function SnapshotOverview({ snapshots }: { snapshots: ProjectSnapshot[] }) {
   let totalCompute = 0
+  let totalActiveTime = 0
   let totalStorageBH = 0
   let totalTransfer = 0
-  let totalWritten = 0
 
   for (const s of snapshots) {
     totalCompute += s.computeTimeSeconds
+    totalActiveTime += s.activeTimeSeconds ?? 0
     totalStorageBH += s.dataStorageBytesHour
     totalTransfer += s.dataTransferBytes
-    totalWritten += s.writtenDataBytes
   }
 
   const hoursInPeriod = computeSnapshotHoursInPeriod(snapshots)
   const periodStart = snapshots[0]?.consumptionPeriodStart ?? ""
   const periodEnd = snapshots[0]?.consumptionPeriodEnd ?? ""
   const periodLabel = periodStart && periodEnd
-    ? `${new Date(periodStart).toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${new Date(periodEnd).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+    ? formatBillingPeriod(periodStart, periodEnd)
     : "current billing period"
 
   return (
@@ -63,9 +65,9 @@ export function SnapshotOverview({ snapshots }: { snapshots: ProjectSnapshot[] }
           subtitle="Current billing period"
         />
         <MetricCard
-          title="Written Data"
-          value={formatBytes(totalWritten)}
-          subtitle="Current billing period"
+          title="Active Time"
+          value={formatActiveTime(totalActiveTime)}
+          subtitle="Wall-clock time endpoints were active"
         />
       </div>
     </div>

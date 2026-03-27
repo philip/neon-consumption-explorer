@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { type ColumnDef } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
-import { formatCUHours, formatBytes, formatCurrency } from "@/lib/format"
+import { formatCUHours, formatBytes, formatCurrency, formatActiveTime } from "@/lib/format"
 import { ArrowUpDown } from "lucide-react"
 import { DataTable } from "@/components/data-table"
 
@@ -13,6 +13,7 @@ export type ProjectRow = {
   projectId: string
   projectName: string
   compute: number
+  activeTimeSeconds: number
   storageTotal: number
   publicTransfer: number
   privateTransfer: number
@@ -48,6 +49,20 @@ function buildColumns(queryString: string): ColumnDef<ProjectRow, unknown>[] {
         </Button>
       ),
       cell: ({ row }) => formatCUHours(row.original.compute),
+    },
+    {
+      accessorKey: "activeTimeSeconds",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="-ml-4"
+        >
+          Active Time
+          <ArrowUpDown className="ml-2 h-4 w-4" />
+        </Button>
+      ),
+      cell: ({ row }) => formatActiveTime(row.original.activeTimeSeconds),
     },
     {
       accessorKey: "storageTotal",
