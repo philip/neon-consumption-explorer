@@ -6,7 +6,6 @@ import { resolveOrg } from "@/lib/org"
 import { detectPlanFromConsumption } from "@/lib/pricing"
 import type { Plan } from "@/lib/plans"
 import { parseBillingMonth, getAvailableMonths, billingPeriodToParam } from "@/lib/billing-period"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BillingPeriodPicker } from "@/components/billing-period-picker"
 import { PlanBadge } from "@/components/plan-badge"
@@ -46,25 +45,17 @@ async function GuideContent({
 
   return (
     <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium">Your Plan</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <PlanBadge plan={plan} />
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <PlanBadge plan={plan} />
+        <span className="text-muted-foreground">—</span>
+        <p className="text-muted-foreground">
           {isPaid ? (
-            <p className="text-muted-foreground">
-              Full V2 consumption history is available. Below you will find every billable
-              metric, what it means, how to calculate cost, and how to fetch it with curl.
-            </p>
+            <><a href="https://api-docs.neon.tech/reference/getconsumptionhistoryperprojectv2" className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">V2 consumption history</a>: every billable metric, cost formulas, and curl examples.</>
           ) : (
-            <p className="text-muted-foreground">
-              The V2 consumption history endpoint requires a paid plan. Below you will find
-              what usage data is available on the Free plan.
-            </p>
+            <><a href="https://api-docs.neon.tech/reference/getconsumptionhistoryperprojectv2" className="underline hover:text-foreground" target="_blank" rel="noopener noreferrer">V2 consumption history</a> requires a paid plan. Showing available Free plan usage data.</>
           )}
-        </CardContent>
-      </Card>
+        </p>
+      </div>
 
       {isPaid ? (
         <>
