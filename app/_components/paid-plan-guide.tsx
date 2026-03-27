@@ -21,6 +21,7 @@ import type { BillingPeriod } from "@/lib/billing-period"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { MetricExplainer } from "@/components/metric-explainer"
 import { CurlBlock } from "@/components/curl-block"
+import { ConsumptionFieldCard } from "@/components/consumption-field-card"
 import type { ProjectConsumption } from "@/lib/consumption"
 
 export function PaidPlanGuide({
@@ -273,6 +274,35 @@ public_network_transfer_bytes${planConfig.hasPrivateNetworking ? ",private_netwo
           />
         </CardContent>
       </Card>
+      <ConsumptionFieldCard
+        title="Quick Project Snapshot"
+        endpoint="GET /projects/{project_id}"
+        description="Returns current billing period consumption for a single project. A quick alternative to querying the full consumption history, useful for spot-checking one project without date range parameters."
+        fields={[
+          {
+            name: "compute_time_seconds",
+            description: "Total CPU-seconds this billing period. Divide by 3,600 for CU-hours.",
+          },
+          {
+            name: "active_time_seconds",
+            description: "Wall-clock time endpoints were running. Helps distinguish idle from active compute.",
+          },
+          {
+            name: "data_storage_bytes_hour",
+            description: "Byte-hours of storage for the period. Divide by hours elapsed for average size, or by 744 × 1e9 for GB-months.",
+          },
+          {
+            name: "data_transfer_bytes",
+            description: "Egress traffic this period in bytes. Divide by 1,000,000,000 for GB.",
+          },
+          {
+            name: "consumption_period_start",
+            description: "Billing cycle start. All consumption fields reset here.",
+          },
+        ]}
+        curl={`curl "https://console.neon.tech/api/v2/projects/\${PROJECT_ID}" \\
+  -H "Authorization: Bearer \${NEON_API_KEY}"`}
+      />
     </div>
   )
 }

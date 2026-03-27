@@ -4,7 +4,7 @@ import { BYTES_PER_GB } from "@/lib/pricing"
 import { getPlan } from "@/lib/plans"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { UsageBar } from "@/components/usage-bar"
-import { CurlBlock } from "@/components/curl-block"
+import { ConsumptionFieldCard } from "@/components/consumption-field-card"
 import {
   FreePlanProjectTable,
   type FreePlanProjectRow,
@@ -143,36 +143,61 @@ export async function FreePlanGuide({ orgId }: { orgId: string }) {
         </CardContent>
       </Card>
 
-      <details className="group">
-        <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
-          API Endpoints (curl examples)
-        </summary>
-        <Card className="mt-2">
-          <CardContent className="space-y-3 pt-4">
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                <strong className="text-foreground">Get project detail</strong>{" "}
-                <code>active_time_seconds</code>, <code>compute_time_seconds</code>,{" "}
-                <code>data_transfer_bytes</code>
-              </p>
-              <CurlBlock
-                cmd={`curl "https://console.neon.tech/api/v2/projects/\${PROJECT_ID}" \\
+      <div className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">Consumption API Fields</h2>
+
+        <ConsumptionFieldCard
+          title="Project Detail"
+          endpoint="GET /projects/{project_id}"
+          description="Returns current billing period consumption for a single project. All consumption fields reset at the start of each billing cycle."
+          fields={[
+            {
+              name: "compute_time_seconds",
+              description: `Total CPU-seconds this billing period. Divide by 3,600 for hours. Free plan limit: ${computeHoursLimit} hrs per project.`,
+            },
+            {
+              name: "active_time_seconds",
+              description: "Wall-clock time endpoints were running (always >= compute_time_seconds). Helps distinguish idle endpoints from actively computing ones.",
+            },
+            {
+              name: "data_transfer_bytes",
+              description: `Egress traffic this period. Divide by 1,000,000,000 for GB. Free plan limit: ${allowances.publicTransferGB} GB shared across all projects.`,
+            },
+            {
+              name: "data_storage_bytes_hour",
+              description: "Byte-hours of storage. Divide by hours elapsed in the period for average size in bytes. Note: the per-project storage cap applies to logical branch size, not this value.",
+            },
+            {
+              name: "consumption_period_start",
+              description: "Start of your billing cycle. All consumption fields reset here.",
+            },
+            {
+              name: "consumption_period_end",
+              description: "End of your billing cycle. Use with the start date to track how far into the period you are.",
+            },
+          ]}
+          curl={`curl "https://console.neon.tech/api/v2/projects/\${PROJECT_ID}" \\
   -H "Authorization: Bearer \${NEON_API_KEY}"`}
-              />
-            </div>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                <strong className="text-foreground">List branches</strong>{" "}
-                <code>logical_size</code> per branch
-              </p>
-              <CurlBlock
-                cmd={`curl "https://console.neon.tech/api/v2/projects/\${PROJECT_ID}/branches" \\
+        />
+
+        <ConsumptionFieldCard
+          title="List Branches"
+          endpoint="GET /projects/{project_id}/branches"
+          description={`Returns all branches for a project. The free plan allows up to ${allowances.branchesPerProject} branches per project.`}
+          fields={[
+            {
+              name: "logical_size",
+              description: `Actual data size of the branch in bytes. Sum across branches to get total project storage. Free plan limit: ${formatBytes(storagePerProjectBytes)} per project.`,
+            },
+            {
+              name: "name",
+              description: "Branch name. The default branch (usually 'main') is your primary data store.",
+            },
+          ]}
+          curl={`curl "https://console.neon.tech/api/v2/projects/\${PROJECT_ID}/branches" \\
   -H "Authorization: Bearer \${NEON_API_KEY}"`}
-              />
-            </div>
-          </CardContent>
-        </Card>
-      </details>
+        />
+      </div>
     </div>
   )
 }
