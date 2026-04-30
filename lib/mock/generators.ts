@@ -175,6 +175,9 @@ export function generateConsumptionHistory(
     const dailyPitrBH = rates.instantRestorePerGBMonth > 0
       ? ((projSpend * (weights.storageHistory ?? 0)) / rates.instantRestorePerGBMonth * HOURS_PER_BILLING_PERIOD * 1e9) / fullMonthDays
       : 0
+    const dailySnapshotBH = rates.snapshotsPerGBMonth > 0
+      ? ((projSpend * (weights.storageSnapshot ?? 0)) / rates.snapshotsPerGBMonth * HOURS_PER_BILLING_PERIOD * 1e9) / fullMonthDays
+      : 0
     const dailyPublicTransfer = rates.publicTransferPerGB > 0
       ? ((projSpend * (weights.publicTransfer ?? 0)) / rates.publicTransferPerGB * 1e9) / fullMonthDays
       : 0
@@ -194,6 +197,7 @@ export function generateConsumptionHistory(
           { metric_name: "root_branch_bytes_month", value: Math.round(dailyStorageRootBH * (0.9 + rng() * 0.2)) },
           { metric_name: "child_branch_bytes_month", value: Math.round(dailyStorageChildBH * (0.9 + rng() * 0.2)) },
           { metric_name: "instant_restore_bytes_month", value: Math.round(dailyPitrBH * (0.9 + rng() * 0.2)) },
+          { metric_name: "snapshot_storage_bytes_month", value: Math.round(dailySnapshotBH * (0.9 + rng() * 0.2)) },
           { metric_name: "public_network_transfer_bytes", value: Math.round(dailyPublicTransfer * jitter) },
           { metric_name: "private_network_transfer_bytes", value: Math.round(dailyPrivateTransfer * jitter) },
           { metric_name: "extra_branches_month", value: Math.round(dailyExtraBranchHours * (0.9 + rng() * 0.2)) },

@@ -45,6 +45,17 @@ export function calculateInstantRestoreCost(byteHours: number, plan: Plan): numb
   return gbMonths * getPlan(plan).rates.instantRestorePerGBMonth
 }
 
+/**
+ * Calculate snapshot storage cost from byte-hours.
+ * Aggregates the `snapshot_storage_bytes_month` consumption metric
+ * (sum of full_size for manual + first scheduled, plus diff_size for
+ * subsequent scheduled snapshots) over the queried period.
+ */
+export function calculateSnapshotStorageCost(byteHours: number, plan: Plan): number {
+  const gbMonths = byteHours / HOURS_PER_BILLING_PERIOD / BYTES_PER_GB
+  return gbMonths * getPlan(plan).rates.snapshotsPerGBMonth
+}
+
 export function calculatePublicTransferCost(bytes: number, plan: Plan): number {
   const config = getPlan(plan)
   if (config.rates.publicTransferPerGB === 0) return 0
@@ -113,6 +124,7 @@ export function calculateTotalCost(metrics: ConsumptionMetrics, plan: Plan): num
     calculateStorageCost(metrics.root_branch_byte_hours, plan) +
     calculateStorageCost(metrics.child_branch_byte_hours, plan) +
     calculateInstantRestoreCost(metrics.instant_restore_byte_hours, plan) +
+    calculateSnapshotStorageCost(metrics.snapshot_storage_byte_hours, plan) +
     calculatePublicTransferCost(metrics.public_network_transfer_bytes, plan) +
     calculatePrivateTransferCost(metrics.private_network_transfer_bytes, plan) +
     calculateExtraBranchesCost(metrics.billable_extra_branch_hours, plan)

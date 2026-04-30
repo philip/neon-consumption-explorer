@@ -2,12 +2,14 @@ import { describe, it, expect } from "vitest"
 import {
   calculateComputeCost,
   calculateStorageCost,
+  calculateSnapshotStorageCost,
   calculatePublicTransferCost,
   billableBranchHours,
   calculateTotalCost,
   HOURS_PER_BILLING_PERIOD,
 } from "@/lib/pricing"
 import { aggregateConsumption } from "@/lib/consumption"
+import { isMetricBillable, METRIC_BY_API_NAME } from "@/lib/metrics"
 import type { ConsumptionProject } from "@/lib/api"
 
 describe("calculateComputeCost", () => {
@@ -26,6 +28,20 @@ describe("calculateStorageCost", () => {
     // 1 GB for a full billing period = 1 GB-month = $0.35 on launch
     const byteHours = 1e9 * HOURS_PER_BILLING_PERIOD
     expect(calculateStorageCost(byteHours, "launch")).toBeCloseTo(0.35)
+  })
+})
+
+describe("calculateSnapshotStorageCost", () => {
+  it("converts snapshot byte-hours to GB-months and multiplies by rate", () => {
+    // 1 GB for a full billing period = 1 GB-month = $0.09 on launch and scale
+    const byteHours = 1e9 * HOURS_PER_BILLING_PERIOD
+    expect(calculateSnapshotStorageCost(byteHours, "launch")).toBeCloseTo(0.09)
+    expect(calculateSnapshotStorageCost(byteHours, "scale")).toBeCloseTo(0.09)
+  })
+
+  it("returns 0 for free plan (rate is 0)", () => {
+    const byteHours = 1e9 * HOURS_PER_BILLING_PERIOD
+    expect(calculateSnapshotStorageCost(byteHours, "free")).toBe(0)
   })
 })
 
@@ -66,6 +82,7 @@ describe("calculateTotalCost", () => {
         root_branch_byte_hours: 0,
         child_branch_byte_hours: 0,
         instant_restore_byte_hours: 0,
+        snapshot_storage_byte_hours: 0,
         public_network_transfer_bytes: 0,
         private_network_transfer_bytes: 0,
         total_branch_hours: 0,
@@ -96,9 +113,81 @@ describe("aggregateConsumption", () => {
   }
 
   it("sums metrics across projects into totals", () => {
-    const { totals } = aggregateConsumption([project], "launch")
+    const { totals, billableTotals } = aggregateConsumption([project], "launch")
     expect(totals.compute_unit_seconds).toBe(7200)
     expect(totals.public_network_transfer_bytes).toBe(1e9)
+    // Non-marked metrics: totals and billableTotals stay in sync.
+    expect(billableTotals.compute_unit_seconds).toBe(7200)
+    expect(billableTotals.public_network_transfer_bytes).toBe(1e9)
+  })
+
+  it("aggregates pre-launch snapshot data into totals but excludes from billableTotals", () => {
+    const projectWithSnapshots: ConsumptionProject = {
+      project_id: "p2",
+      periods: [
+        {
+          consumption: [
+            {
+              timeframe_start: "2024-01-01T00:00:00Z",
+              metrics: [
+                { metric_name: "snapshot_storage_bytes_month", value: 5e10 },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const { totals, billableTotals } = aggregateConsumption([projectWithSnapshots], "launch")
+    expect(totals.snapshot_storage_byte_hours).toBe(5e10)
+    expect(billableTotals.snapshot_storage_byte_hours).toBe(0)
+  })
+
+  it("includes on/after billingStartDate snapshot data in both totals and billableTotals", () => {
+    const projectWithSnapshots: ConsumptionProject = {
+      project_id: "p3",
+      periods: [
+        {
+          consumption: [
+            {
+              timeframe_start: "2026-05-01T00:00:00Z",
+              metrics: [
+                { metric_name: "snapshot_storage_bytes_month", value: 5e10 },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const { totals, billableTotals } = aggregateConsumption([projectWithSnapshots], "launch")
+    expect(totals.snapshot_storage_byte_hours).toBe(5e10)
+    expect(billableTotals.snapshot_storage_byte_hours).toBe(5e10)
+  })
+
+  it("splits mixed-boundary snapshot data correctly", () => {
+    const projectAcrossLaunch: ConsumptionProject = {
+      project_id: "p4",
+      periods: [
+        {
+          consumption: [
+            {
+              timeframe_start: "2026-04-30T00:00:00Z",
+              metrics: [
+                { metric_name: "snapshot_storage_bytes_month", value: 3e10 },
+              ],
+            },
+            {
+              timeframe_start: "2026-05-01T00:00:00Z",
+              metrics: [
+                { metric_name: "snapshot_storage_bytes_month", value: 7e10 },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const { totals, billableTotals } = aggregateConsumption([projectAcrossLaunch], "launch")
+    expect(totals.snapshot_storage_byte_hours).toBe(1e11)
+    expect(billableTotals.snapshot_storage_byte_hours).toBe(7e10)
   })
 
   it("returns one daily data point per distinct date", () => {
@@ -108,9 +197,35 @@ describe("aggregateConsumption", () => {
   })
 
   it("returns empty results for no projects", () => {
-    const { daily, totals, dayCount } = aggregateConsumption([], "launch")
+    const { daily, totals, billableTotals, dayCount } = aggregateConsumption([], "launch")
     expect(daily).toHaveLength(0)
     expect(dayCount).toBe(0)
     expect(totals.compute_unit_seconds).toBe(0)
+    expect(billableTotals.compute_unit_seconds).toBe(0)
+  })
+})
+
+describe("isMetricBillable", () => {
+  const snapshot = METRIC_BY_API_NAME.get("snapshot_storage_bytes_month")!
+  const compute = METRIC_BY_API_NAME.get("compute_unit_seconds")!
+
+  it("returns false for snapshots before 2026-05-01", () => {
+    expect(isMetricBillable(snapshot, "2026-04-30T23:59:59Z")).toBe(false)
+    expect(isMetricBillable(snapshot, "2024-01-01T00:00:00Z")).toBe(false)
+  })
+
+  it("returns true for snapshots on or after 2026-05-01", () => {
+    expect(isMetricBillable(snapshot, "2026-05-01T00:00:00Z")).toBe(true)
+    expect(isMetricBillable(snapshot, "2026-06-15T12:00:00Z")).toBe(true)
+  })
+
+  it("returns true for metrics without billingStartDate on every date", () => {
+    expect(isMetricBillable(compute, "2020-01-01T00:00:00Z")).toBe(true)
+    expect(isMetricBillable(compute, "2030-01-01T00:00:00Z")).toBe(true)
+  })
+
+  it("accepts date-only strings (chart `date` form)", () => {
+    expect(isMetricBillable(snapshot, "2026-04-30")).toBe(false)
+    expect(isMetricBillable(snapshot, "2026-05-01")).toBe(true)
   })
 })

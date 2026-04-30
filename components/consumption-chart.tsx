@@ -15,7 +15,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { Plan } from "@/lib/plans"
-import { METRICS, type MetricKey } from "@/lib/metrics"
+import { METRICS, isMetricBillable, type MetricKey } from "@/lib/metrics"
 
 type DataPoint = { date: string } & Record<MetricKey, number>
 
@@ -82,10 +82,13 @@ function compactNumber(value: number): string {
 }
 
 // Derived from the METRICS registry — new metrics appear in cost view automatically.
+// Pre-`billingStartDate` days contribute zero cost (e.g. snapshots before 2026-05-01).
 function toCostPoint(d: DataPoint, plan: Plan): DataPoint {
   const result = { date: d.date } as DataPoint
   for (const metric of METRICS) {
-    result[metric.dailyKey] = d[metric.dailyKey] * metric.toCostMultiplier(plan)
+    result[metric.dailyKey] = isMetricBillable(metric, d.date)
+      ? d[metric.dailyKey] * metric.toCostMultiplier(plan)
+      : 0
   }
   return result
 }

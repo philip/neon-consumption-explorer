@@ -3,6 +3,7 @@ export type ConsumptionMetrics = {
   root_branch_byte_hours: number
   child_branch_byte_hours: number
   instant_restore_byte_hours: number
+  snapshot_storage_byte_hours: number
   public_network_transfer_bytes: number
   private_network_transfer_bytes: number
   /** Raw branch-hours before allowance deduction (all child branches). */
