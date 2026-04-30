@@ -35,7 +35,7 @@ export const DEMO_SCENARIOS: DemoScenario[] = [
     plan: "launch",
     projectCount: 3,
     monthlySpend: 15,
-    weights: { compute: 0.70, storageRoot: 0.105, storageChild: 0.045, storageHistory: 0.05, publicTransfer: 0.10 },
+    weights: { compute: 0.68, storageRoot: 0.105, storageChild: 0.045, storageHistory: 0.05, storageSnapshot: 0.02, publicTransfer: 0.10 },
   },
   {
     orgId: "demo-launch-heavy",
@@ -43,7 +43,7 @@ export const DEMO_SCENARIOS: DemoScenario[] = [
     plan: "launch",
     projectCount: 12,
     monthlySpend: 150,
-    weights: { compute: 0.55, storageRoot: 0.14, storageChild: 0.06, storageHistory: 0.10, publicTransfer: 0.10, extraBranches: 0.05 },
+    weights: { compute: 0.52, storageRoot: 0.14, storageChild: 0.06, storageHistory: 0.10, storageSnapshot: 0.03, publicTransfer: 0.10, extraBranches: 0.05 },
   },
   {
     orgId: "demo-scale-heavy",
@@ -51,7 +51,7 @@ export const DEMO_SCENARIOS: DemoScenario[] = [
     plan: "scale",
     projectCount: 25,
     monthlySpend: 500,
-    weights: { compute: 0.50, storageRoot: 0.14, storageChild: 0.06, storageHistory: 0.10, publicTransfer: 0.08, privateTransfer: 0.02, extraBranches: 0.10 },
+    weights: { compute: 0.46, storageRoot: 0.14, storageChild: 0.06, storageHistory: 0.10, storageSnapshot: 0.04, publicTransfer: 0.08, privateTransfer: 0.02, extraBranches: 0.10 },
   },
 ]
 

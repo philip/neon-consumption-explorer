@@ -11,6 +11,7 @@ import {
   calculateComputeCost,
   calculateStorageCost,
   calculateInstantRestoreCost,
+  calculateSnapshotStorageCost,
   calculatePublicTransferCost,
   calculatePrivateTransferCost,
   calculateExtraBranchesCost,
@@ -42,6 +43,7 @@ export function PaidPlanGuide({
   let rootStorageBH = 0
   let childStorageBH = 0
   let pitrBH = 0
+  let snapshotBH = 0
   let publicTransfer = 0
   let privateTransfer = 0
   let totalBillableBranchHours = 0
@@ -64,6 +66,9 @@ export function PaidPlanGuide({
               break
             case "instant_restore_bytes_month":
               pitrBH += m.value
+              break
+            case "snapshot_storage_bytes_month":
+              snapshotBH += m.value
               break
             case "public_network_transfer_bytes":
               publicTransfer += m.value
@@ -89,10 +94,11 @@ export function PaidPlanGuide({
   const rootStorageCost = calculateStorageCost(rootStorageBH, plan)
   const childStorageCost = calculateStorageCost(childStorageBH, plan)
   const pitrCost = calculateInstantRestoreCost(pitrBH, plan)
+  const snapshotCost = calculateSnapshotStorageCost(snapshotBH, plan)
   const pubTransferCost = calculatePublicTransferCost(publicTransfer, plan)
   const privTransferCost = calculatePrivateTransferCost(privateTransfer, plan)
   const branchCost = calculateExtraBranchesCost(totalBillableBranchHours, plan)
-  const totalCost = computeCost + rootStorageCost + childStorageCost + pitrCost + pubTransferCost + privTransferCost + branchCost
+  const totalCost = computeCost + rootStorageCost + childStorageCost + pitrCost + snapshotCost + pubTransferCost + privTransferCost + branchCost
 
   const curlBase = `curl "https://console.neon.tech/api/v2/consumption_history/v2/projects?\\
 org_id=\${ORG_ID}&from=${billingPeriod.from}&to=${billingPeriod.to}&\\
@@ -177,6 +183,23 @@ granularity=${billingPeriod.granularity}`
           ].join("\n")}
           cost={formatCurrency(pitrCost)}
           curl={`${curlBase}&metrics=instant_restore_bytes_month&limit=100" \\
+  -H "Authorization: Bearer \${NEON_API_KEY}"`}
+        />
+
+        <MetricExplainer
+          title="Snapshots"
+          apiField="snapshot_storage_bytes_month"
+          rawValue={`${snapshotBH.toExponential(2)} byte-hours`}
+          interpretation={formatGBMonths(snapshotBH)}
+          formula={[
+            `API reports snapshot storage as byte-hours.`,
+            `Manual snapshots and the first scheduled snapshot contribute their full logical size.`,
+            `Subsequent scheduled snapshots contribute only the diff since the previous one.`,
+            `Convert to GB-months: byte-hours ÷ 744 hrs ÷ 1,000,000,000 = ${formatGBMonths(snapshotBH)}.`,
+            `Cost: ${formatGBMonths(snapshotBH)} × $${pricing.snapshotsPerGBMonth}/GB-mo`,
+          ].join("\n")}
+          cost={formatCurrency(snapshotCost)}
+          curl={`${curlBase}&metrics=snapshot_storage_bytes_month&limit=100" \\
   -H "Authorization: Bearer \${NEON_API_KEY}"`}
         />
 
@@ -269,7 +292,7 @@ granularity=${billingPeriod.granularity}`
 org_id=\${ORG_ID}&from=${billingPeriod.from}&to=${billingPeriod.to}&\\
 granularity=${billingPeriod.granularity}&metrics=compute_unit_seconds,\\
 root_branch_bytes_month,child_branch_bytes_month,\\
-instant_restore_bytes_month,extra_branches_month,\\
+instant_restore_bytes_month,snapshot_storage_bytes_month,extra_branches_month,\\
 public_network_transfer_bytes${planConfig.hasPrivateNetworking ? ",private_network_transfer_bytes" : ""}&limit=100" \\
   -H "Authorization: Bearer \${NEON_API_KEY}"`}
           />

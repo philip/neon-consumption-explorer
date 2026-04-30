@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import {
   calculateComputeCost,
   calculateStorageCost,
+  calculateSnapshotStorageCost,
   calculatePublicTransferCost,
   billableBranchHours,
   calculateTotalCost,
@@ -26,6 +27,20 @@ describe("calculateStorageCost", () => {
     // 1 GB for a full billing period = 1 GB-month = $0.35 on launch
     const byteHours = 1e9 * HOURS_PER_BILLING_PERIOD
     expect(calculateStorageCost(byteHours, "launch")).toBeCloseTo(0.35)
+  })
+})
+
+describe("calculateSnapshotStorageCost", () => {
+  it("converts snapshot byte-hours to GB-months and multiplies by rate", () => {
+    // 1 GB for a full billing period = 1 GB-month = $0.09 on launch and scale
+    const byteHours = 1e9 * HOURS_PER_BILLING_PERIOD
+    expect(calculateSnapshotStorageCost(byteHours, "launch")).toBeCloseTo(0.09)
+    expect(calculateSnapshotStorageCost(byteHours, "scale")).toBeCloseTo(0.09)
+  })
+
+  it("returns 0 for free plan (rate is 0)", () => {
+    const byteHours = 1e9 * HOURS_PER_BILLING_PERIOD
+    expect(calculateSnapshotStorageCost(byteHours, "free")).toBe(0)
   })
 })
 
@@ -66,6 +81,7 @@ describe("calculateTotalCost", () => {
         root_branch_byte_hours: 0,
         child_branch_byte_hours: 0,
         instant_restore_byte_hours: 0,
+        snapshot_storage_byte_hours: 0,
         public_network_transfer_bytes: 0,
         private_network_transfer_bytes: 0,
         total_branch_hours: 0,
@@ -99,6 +115,26 @@ describe("aggregateConsumption", () => {
     const { totals } = aggregateConsumption([project], "launch")
     expect(totals.compute_unit_seconds).toBe(7200)
     expect(totals.public_network_transfer_bytes).toBe(1e9)
+  })
+
+  it("aggregates snapshot_storage_bytes_month into snapshot_storage_byte_hours", () => {
+    const projectWithSnapshots: ConsumptionProject = {
+      project_id: "p2",
+      periods: [
+        {
+          consumption: [
+            {
+              timeframe_start: "2024-01-01T00:00:00Z",
+              metrics: [
+                { metric_name: "snapshot_storage_bytes_month", value: 5e10 },
+              ],
+            },
+          ],
+        },
+      ],
+    }
+    const { totals } = aggregateConsumption([projectWithSnapshots], "launch")
+    expect(totals.snapshot_storage_byte_hours).toBe(5e10)
   })
 
   it("returns one daily data point per distinct date", () => {

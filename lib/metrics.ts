@@ -7,6 +7,7 @@ import {
   calculateComputeCost,
   calculateStorageCost,
   calculateInstantRestoreCost,
+  calculateSnapshotStorageCost,
   calculatePublicTransferCost,
   calculatePrivateTransferCost,
   calculateExtraBranchesCost,
@@ -27,6 +28,7 @@ export type MetricKey =
   | "storageRoot"
   | "storageChild"
   | "storageHistory"
+  | "storageSnapshot"
   | "publicTransfer"
   | "privateTransfer"
   | "extraBranches"
@@ -139,6 +141,21 @@ export const METRICS: MetricDef[] = [
     toCostMultiplier: (plan) =>
       getPlan(plan).rates.instantRestorePerGBMonth / HOURS_PER_BILLING_PERIOD / BYTES_PER_GB,
     calculateCost: (v, plan) => calculateInstantRestoreCost(v, plan),
+    formatDisplayValue: (v) => formatGBMonths(v),
+    formatValue: (v) => formatGBMonths(v),
+  },
+  {
+    apiName: "snapshot_storage_bytes_month",
+    dailyKey: "storageSnapshot",
+    totalsKey: "snapshot_storage_byte_hours",
+    rateKey: "snapshotsPerGBMonth",
+    rateUnit: "GB-mo",
+    label: "Snapshots",
+    color: "var(--chart-3)",
+    chartUnit: "byte-hours-daily",
+    toCostMultiplier: (plan) =>
+      getPlan(plan).rates.snapshotsPerGBMonth / HOURS_PER_BILLING_PERIOD / BYTES_PER_GB,
+    calculateCost: (v, plan) => calculateSnapshotStorageCost(v, plan),
     formatDisplayValue: (v) => formatGBMonths(v),
     formatValue: (v) => formatGBMonths(v),
   },
