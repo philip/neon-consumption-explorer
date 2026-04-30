@@ -19,7 +19,7 @@ export interface paths {
          * @description Analyzes the database for security and performance issues.
          *     Returns a list of issues categorized by severity (ERROR, WARN, INFO).
          *
-         *     Requires read access to the project.
+         *     Requires read access to the project and Data API enabled.
          */
         get: operations["getProjectAdvisorSecurityIssues"];
         put?: never;
@@ -202,31 +202,6 @@ export interface paths {
          *     You can obtain a `project_id` by listing the projects for your Neon account.
          */
         patch: operations["updateProject"];
-        trace?: never;
-    };
-    "/projects/{project_id}/restore": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The Neon project ID */
-                project_id: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Restore a deleted project
-         * @deprecated
-         * @description DEPRECATED, use `/projects/{project_id}/recover` instead. Restores a deleted project during the deletion grace period.
-         *     You can obtain a `project_id` by listing the projects for your Neon account.
-         */
-        post: operations["restoreProject"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
         trace?: never;
     };
     "/projects/{project_id}/recover": {
@@ -1172,6 +1147,91 @@ export interface paths {
         patch: operations["updateNeonAuthOrganizationPlugin"];
         trace?: never;
     };
+    "/projects/{project_id}/branches/{branch_id}/auth/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Neon project ID */
+                project_id: string;
+                /** @description The Neon branch ID */
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update auth configuration
+         * @description Updates the auth configuration for the branch.
+         *     Currently supports updating the application name used in auth emails.
+         */
+        patch: operations["updateNeonAuthConfig"];
+        trace?: never;
+    };
+    "/projects/{project_id}/branches/{branch_id}/auth/plugins/magic-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Neon project ID */
+                project_id: string;
+                /** @description The Neon branch ID */
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update magic link plugin configuration
+         * @description Updates the magic link plugin configuration for Neon Auth.
+         *     The magic link plugin enables passwordless authentication via email magic links.
+         */
+        patch: operations["updateNeonAuthMagicLinkPlugin"];
+        trace?: never;
+    };
+    "/projects/{project_id}/branches/{branch_id}/auth/plugins/phone_number": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Neon project ID */
+                project_id: string;
+                /** @description The Neon branch ID */
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Get phone number plugin configuration
+         * @description Returns the phone number plugin configuration for Neon Auth.
+         *     The phone number plugin enables phone-based OTP authentication.
+         */
+        get: operations["getNeonAuthPhoneNumberPlugin"];
+        /**
+         * Update phone number plugin configuration
+         * @description Updates the phone number plugin configuration for Neon Auth.
+         *     The phone number plugin enables phone-based OTP authentication.
+         *     OTP codes are delivered via the `send.otp` webhook event with `delivery_preference: "sms"`.
+         *     A webhook must be configured with the `send.otp` event enabled for SMS delivery to work.
+         */
+        put: operations["updateNeonAuthPhoneNumberPlugin"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/projects/{project_id}/branches/{branch_id}/auth/webhooks": {
         parameters: {
             query?: never;
@@ -1335,6 +1395,11 @@ export interface paths {
          *     The deletion occurs after all operations finish.
          *     You cannot delete a project's root or default branch, and you cannot delete a branch that has a child branch.
          *     A project must have at least one branch.
+         *
+         *     By default, deleted branches can be recovered within a 7-day grace period.
+         *     Use the `hard_delete` parameter to permanently delete the branch immediately without a recovery window.
+         *
+         *     Soft delete and branch recovery are in preview and not available to all users.
          */
         delete: operations["deleteProjectBranch"];
         options?: never;
@@ -1533,6 +1598,37 @@ export interface paths {
          *     For more information, see [Manage branches](https://neon.tech/docs/manage/branches/).
          */
         post: operations["setDefaultProjectBranch"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/projects/{project_id}/branches/{branch_id}/recover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Neon project ID */
+                project_id: string;
+                /** @description The branch ID */
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recover a deleted branch
+         * @description Recovers a deleted branch during the deletion grace period (7 days).
+         *     The branch must have been soft deleted and not yet permanently deleted.
+         *     Recovery restores the branch and its endpoints to an idle state.
+         *     Connection strings remain valid after recovery.
+         *     TTL branches become non-TTL branches after recovery.
+         *
+         *     This endpoint is in preview and not available to all users.
+         */
+        post: operations["recoverProjectBranch"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2073,8 +2169,11 @@ export interface paths {
         };
         /**
          * Retrieve account consumption metrics (legacy plans)
+         * @deprecated
          * @description Retrieves consumption metrics for Scale and Enterprise plan accounts, and for legacy Scale, Business, and Enterprise plan accounts.
          *     Consumption history begins at the time the account was upgraded to a supported plan.
+         *
+         *     **Deprecated**: This endpoint will be removed on June 1, 2026.
          */
         get: operations["getConsumptionHistoryPerAccount"];
         put?: never;
@@ -2214,6 +2313,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/organizations/{org_id}/billing/spending_limit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Neon organization ID */
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Retrieve the organization's monthly spending limit
+         * @description Returns the configured spending limit for a V3 paid organization.
+         *     `spending_limit_cents: null` indicates that no limit is currently
+         *     set. Available to organization members with read access on Launch
+         *     and Scale plans only.
+         */
+        get: operations["getOrganizationSpendingLimit"];
+        /**
+         * Set the organization's monthly spending limit
+         * @description Sets the spending limit for a V3 paid organization. To remove a
+         *     previously configured limit, send a DELETE request to this endpoint.
+         *     When a limit is configured, email notifications are sent at 80% and
+         *     100% of the limit. Computes are not suspended by this feature.
+         *     Available to organization admins on Launch and Scale plans only.
+         */
+        put: operations["setOrganizationSpendingLimit"];
+        post?: never;
+        /**
+         * Clear the organization's monthly spending limit
+         * @description Removes a previously configured spending limit for a V3 paid
+         *     organization. Idempotent — deleting an already-unset limit still
+         *     succeeds. Available to organization admins on Launch and Scale plans
+         *     only.
+         */
+        delete: operations["deleteOrganizationSpendingLimit"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{org_id}/members": {
         parameters: {
             query?: never;
@@ -2226,7 +2366,7 @@ export interface paths {
         };
         /**
          * Retrieve organization members details
-         * @description Retrieves information about the specified organization members.
+         * @description Retrieves a paginated list of members for the specified organization.
          */
         get: operations["getOrganizationMembers"];
         put?: never;
@@ -2422,7 +2562,10 @@ export interface paths {
         };
         /**
          * List supported regions
-         * @description Lists supported Neon regions
+         * @description Lists supported Neon regions.
+         *
+         *     **Note:** Not all regions are available to all organizations. Pass the `org_id`
+         *     parameter to get an accurate list of regions available to your organization.
          */
         get: operations["getActiveRegions"];
         put?: never;
@@ -2484,6 +2627,7 @@ export interface paths {
         put?: never;
         /**
          * Transfer projects from personal account to organization
+         * @deprecated
          * @description Transfers selected projects, identified by their IDs, from your personal account to a specified organization.
          */
         post: operations["transferProjectsFromUserToOrg"];
@@ -2725,6 +2869,7 @@ export interface components {
          *     Provisioner can be one of the following values:
          *     * k8s-pod
          *     * k8s-neonvm
+         *     * serverless-platform
          *
          *     Clients must expect, that any string value that is not documented in the description above should be treated as a error. UNKNOWN value if safe to treat as an error too.
          */
@@ -3025,7 +3170,7 @@ export interface components {
          * @description The action performed by the operation
          * @enum {string}
          */
-        OperationAction: "create_compute" | "create_timeline" | "start_compute" | "suspend_compute" | "apply_config" | "check_availability" | "delete_timeline" | "create_branch" | "import_data" | "tenant_ignore" | "tenant_attach" | "tenant_detach" | "tenant_reattach" | "replace_safekeeper" | "disable_maintenance" | "apply_storage_config" | "prepare_secondary_pageserver" | "switch_pageserver" | "detach_parent_branch" | "timeline_archive" | "timeline_unarchive" | "start_reserved_compute" | "sync_dbs_and_roles_from_compute" | "apply_schema_from_branch" | "timeline_mark_invisible" | "prewarm_replica" | "promote_replica" | "set_storage_non_dirty" | "swap_binding_id";
+        OperationAction: "create_compute" | "create_timeline" | "start_compute" | "suspend_compute" | "apply_config" | "check_availability" | "delete_timeline" | "create_branch" | "import_data" | "tenant_ignore" | "tenant_attach" | "tenant_detach" | "tenant_reattach" | "replace_safekeeper" | "disable_maintenance" | "apply_storage_config" | "prepare_secondary_pageserver" | "switch_pageserver" | "detach_parent_branch" | "timeline_archive" | "timeline_unarchive" | "start_reserved_compute" | "sync_dbs_and_roles_from_compute" | "apply_schema_from_branch" | "timeline_mark_invisible" | "timeline_update_protected_config" | "prewarm_replica" | "promote_replica" | "set_storage_non_dirty" | "swap_binding_id" | "finalize_migration" | "mark_migration_prepared";
         /**
          * @description The status of the operation
          * @enum {string}
@@ -3674,6 +3819,7 @@ export interface components {
             max_compute_time_non_primary: number;
             max_active_endpoints: number;
             max_read_only_endpoints: number;
+            max_read_computes_per_branch?: number;
             max_allowed_ips: number;
             max_vpc_endpoints_per_region: number;
             max_monitoring_retention_hours: number;
@@ -3854,6 +4000,7 @@ export interface components {
             restored_as?: string;
             /** @description A list of actions that are currently restricted for this branch and the reason why. */
             restricted_actions?: components["schemas"]["BranchRestrictedAction"][];
+            recovery?: components["schemas"]["BranchRecoveryInfo"];
         };
         /**
          * @description The branch’s state, indicating if it is initializing, ready for use, or archived.
@@ -3875,6 +4022,29 @@ export interface components {
             name: string;
             /** @description A human-readable explanation of why the action is restricted. */
             reason: string;
+        };
+        /**
+         * @description Recovery information for a deleted branch. Only present when listing deleted branches
+         *     with `include_deleted=true`.
+         *
+         *     This is part of the Branch Recovery feature, which is in preview and not available to all users.
+         */
+        BranchRecoveryInfo: {
+            /**
+             * Format: date-time
+             * @description Timestamp when the branch was deleted
+             */
+            deleted_at: string;
+            /**
+             * Format: date-time
+             * @description Timestamp when the recovery window expires and the branch will be permanently deleted
+             */
+            recoverable_until: string;
+            /**
+             * @description How the branch was deleted: 'user' for manual deletion, 'ttl' for TTL expiration
+             * @enum {string}
+             */
+            deletion_method: "user" | "ttl";
         };
         /**
          * @example {
@@ -4217,6 +4387,10 @@ export interface components {
             settings: components["schemas"]["EndpointSettingsData"];
             /** @description Whether connection pooling is enabled for the compute endpoint */
             pooler_enabled: boolean;
+            /**
+             * @deprecated
+             * @description DEPRECATED. The connection pooler mode. This field is deprecated and will be removed after 2026-06-20.
+             */
             pooler_mode: components["schemas"]["EndpointPoolerMode"];
             /**
              * @description Whether to restrict connections to the compute endpoint.
@@ -4272,7 +4446,8 @@ export interface components {
          */
         EndpointType: "read_only" | "read_write";
         /**
-         * @description The connection pooler mode. Neon supports PgBouncer in `transaction` mode only.
+         * @deprecated
+         * @description DEPRECATED. The connection pooler mode. Neon supports PgBouncer in `transaction` mode only. This schema is deprecated and will be removed after 2026-06-20.
          * @enum {string}
          */
         EndpointPoolerMode: "transaction";
@@ -4344,6 +4519,10 @@ export interface components {
                  * @description Whether to enable connection pooling for the compute endpoint
                  */
                 pooler_enabled?: boolean;
+                /**
+                 * @deprecated
+                 * @description DEPRECATED. The connection pooler mode. This field is deprecated and will be removed after 2026-06-20.
+                 */
                 pooler_mode?: components["schemas"]["EndpointPoolerMode"];
                 /**
                  * @description Whether to restrict connections to the compute endpoint.
@@ -4387,6 +4566,10 @@ export interface components {
                  * @description Whether to enable connection pooling for the compute endpoint
                  */
                 pooler_enabled?: boolean;
+                /**
+                 * @deprecated
+                 * @description DEPRECATED. The connection pooler mode. This field is deprecated and will be removed after 2026-06-20.
+                 */
                 pooler_mode?: components["schemas"]["EndpointPoolerMode"];
                 /**
                  * @description Whether to restrict connections to the compute endpoint.
@@ -4594,6 +4777,34 @@ export interface components {
             /** @description The type of the tax identification number based on the country. */
             tax_id_type?: string;
             plan_details?: components["schemas"]["PlanDetails"];
+            /**
+             * Format: int64
+             * @description Monthly spending cap in cents for V3 paid plans. When set,
+             *     notifications are sent at 80% and 100% of this limit. `null`
+             *     means no limit is configured.
+             */
+            spending_limit_cents?: number | null;
+        };
+        SpendingLimitUpdateRequest: {
+            /**
+             * Format: int64
+             * @description Monthly spending cap in cents. Must be positive. To remove a
+             *     previously configured limit, send a DELETE request to the
+             *     spending_limit endpoint — `0` and `null` are rejected here.
+             *     The cap is alert-only: notifications fire at 80% and 100%, but
+             *     computes are not suspended. Setting a cap below the period's
+             *     already-accrued spend is permitted and will trigger the
+             *     over-limit notification on the next worker run.
+             */
+            spending_limit_cents: number;
+        };
+        SpendingLimitResponse: {
+            /**
+             * Format: int64
+             * @description Monthly spending cap in cents. `null` indicates that no limit
+             *     is currently configured.
+             */
+            spending_limit_cents: number | null;
         };
         /**
          * @description State of the billing account.
@@ -4610,7 +4821,7 @@ export interface components {
          * @description Indicates whether and how an account makes payments.
          * @enum {string}
          */
-        BillingPaymentMethod: "UNKNOWN" | "none" | "stripe" | "direct_payment" | "aws_mp" | "azure_mp" | "vercel_mp" | "staff" | "trial" | "sponsorship";
+        BillingPaymentMethod: "UNKNOWN" | "none" | "stripe" | "direct_payment" | "aws_mp" | "azure_mp" | "vercel_mp" | "staff" | "trial" | "sponsorship" | "shared_payment_token";
         /**
          * @example {
          *       "id": 834686,
@@ -4706,6 +4917,8 @@ export interface components {
         MemberUserInfo: {
             /** Format: email */
             email: string;
+            /** @description Whether the member has MFA (TOTP) enabled */
+            has_mfa?: boolean;
         };
         MemberWithUser: {
             member: components["schemas"]["Member"];
@@ -4743,6 +4956,13 @@ export interface components {
         };
         OrganizationsResponse: {
             organizations: components["schemas"]["Organization"][];
+        };
+        OrganizationMembership: {
+            organization: components["schemas"]["Organization"];
+            role: components["schemas"]["MemberRole"];
+        };
+        OrganizationMembershipsResponse: {
+            memberships: components["schemas"]["OrganizationMembership"][];
         };
         OrganizationsUpdateRequest: {
             name: string;
@@ -4873,7 +5093,12 @@ export interface components {
             projects_limit: number;
             /** Format: int64 */
             branches_limit: number;
-            max_autoscaling_limit: components["schemas"]["ComputeUnit"];
+            /**
+             * Format: double
+             * @description The maximum autoscaling limit in Compute Units.
+             *     A value of 0 indicates no limit is configured.
+             */
+            max_autoscaling_limit: number;
             /** Format: int64 */
             compute_seconds_limit?: number;
             plan: string;
@@ -4910,6 +5135,10 @@ export interface components {
         /** @description A collection of settings for a compute endpoint */
         EndpointSettingsData: {
             pg_settings?: components["schemas"]["PgSettingsData"];
+            /**
+             * @deprecated
+             * @description DEPRECATED. PgBouncer settings for the compute endpoint. This field is deprecated and will be removed after 2026-06-20.
+             */
             pgbouncer_settings?: components["schemas"]["PgbouncerSettingsData"];
             preload_libraries?: components["schemas"]["PreloadLibraries"];
         };
@@ -4966,6 +5195,10 @@ export interface components {
         /** @description A collection of settings for a Neon endpoint */
         DefaultEndpointSettings: {
             pg_settings?: components["schemas"]["PgSettingsData"];
+            /**
+             * @deprecated
+             * @description DEPRECATED. PgBouncer settings for the compute endpoint. This field is deprecated and will be removed after 2026-06-20.
+             */
             pgbouncer_settings?: components["schemas"]["PgbouncerSettingsData"];
             /**
              * @description The minimum number of Compute Units. The minimum value is `0.25`.
@@ -4984,7 +5217,10 @@ export interface components {
         PgSettingsData: {
             [key: string]: string;
         };
-        /** @description A raw representation of PgBouncer settings */
+        /**
+         * @deprecated
+         * @description DEPRECATED. A raw representation of PgBouncer settings. This schema is deprecated and will be removed after 2026-06-20.
+         */
         PgbouncerSettingsData: {
             [key: string]: string;
         };
@@ -5252,15 +5488,26 @@ export interface components {
             /**
              * Format: int32
              * @description Maximum number of organizations a user can create
+             * @default 10
              */
             organization_limit: number;
-            /** @description Whether users are allowed to create organizations */
-            allow_user_to_create_organization: boolean;
+            /**
+             * Format: int32
+             * @description Maximum number of members per organization
+             * @default 100
+             */
+            membership_limit: number;
             /**
              * @description The role assigned to the user who creates an organization
+             * @default owner
              * @enum {string}
              */
             creator_role: "admin" | "owner";
+            /**
+             * @description Whether to send invitation emails when inviting members to an organization
+             * @default false
+             */
+            send_invitation_email: boolean;
         };
         NeonAuthOrganizationConfigUpdate: {
             /** @description Whether the organization plugin is enabled */
@@ -5270,13 +5517,64 @@ export interface components {
              * @description Maximum number of organizations a user can create
              */
             organization_limit?: number;
-            /** @description Whether users are allowed to create organizations */
-            allow_user_to_create_organization?: boolean;
+            /**
+             * Format: int32
+             * @description Maximum number of members per organization
+             */
+            membership_limit?: number;
             /**
              * @description The role assigned to the user who creates an organization
              * @enum {string}
              */
             creator_role?: "admin" | "owner";
+            /** @description Whether to send invitation emails when inviting members to an organization */
+            send_invitation_email?: boolean;
+        };
+        NeonAuthMagicLinkConfig: {
+            /**
+             * @description Whether the magic link plugin is enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Format: int32
+             * @description Time in minutes before the magic link expires
+             * @default 5
+             */
+            expires_in: number;
+            /**
+             * @description Whether to disable sign-up via magic link
+             * @default false
+             */
+            disable_sign_up: boolean;
+        };
+        NeonAuthMagicLinkConfigUpdate: {
+            /** @description Whether the magic link plugin is enabled */
+            enabled?: boolean;
+            /**
+             * Format: int32
+             * @description Time in minutes before the magic link expires
+             */
+            expires_in?: number;
+            /** @description Whether to disable sign-up via magic link */
+            disable_sign_up?: boolean;
+        };
+        NeonAuthPhoneNumberConfig: {
+            /**
+             * @description Whether the phone number plugin is enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * @description Time in seconds before the OTP expires
+             * @default 300
+             */
+            otp_expires_in: number;
+            /**
+             * @description Maximum number of OTP verification attempts before lockout
+             * @default 3
+             */
+            allowed_attempts: number;
         };
         NeonAuthTransferAuthProviderProjectRequest: {
             project_id: string;
@@ -5295,6 +5593,8 @@ export interface components {
         /** @description Aggregated plugin configurations for Neon Auth */
         NeonAuthPluginConfigs: {
             organization?: components["schemas"]["NeonAuthOrganizationConfig"];
+            magic_link?: components["schemas"]["NeonAuthMagicLinkConfig"];
+            phone_number?: components["schemas"]["NeonAuthPhoneNumberConfig"];
             email_provider?: components["schemas"]["NeonAuthEmailServerConfig"];
             email_and_password?: components["schemas"]["NeonAuthEmailAndPasswordConfig"];
             oauth_providers?: components["schemas"]["NeonAuthOauthProvider"][];
@@ -5303,7 +5603,7 @@ export interface components {
         NeonAuthWebhookConfig: {
             enabled: boolean;
             webhook_url?: string;
-            enabled_events?: ("user.before_create" | "user.created" | "send.otp" | "send.magic_link")[];
+            enabled_events?: ("user.before_create" | "user.created" | "send.otp" | "send.magic_link" | "organization.invitation.created" | "organization.invitation.accepted" | "phone_number.verified")[];
             /** @default 5 */
             timeout_seconds: number;
         };
@@ -5414,6 +5714,16 @@ export interface components {
             transfer_status?: components["schemas"]["NeonAuthProviderProjectTransferStatus"];
             jwks_url: string;
             base_url?: string;
+            /** @description The application name used in auth emails and communications. Defaults to the Neon project name. */
+            name?: string;
+        };
+        NeonAuthConfigUpdate: {
+            /** @description The application name used in auth emails and communications. */
+            name: string;
+        };
+        NeonAuthConfigResponse: {
+            /** @description The application name used in auth emails and communications. */
+            name: string;
         };
         GeneralError: {
             /**
@@ -5428,6 +5738,7 @@ export interface components {
         /** @default  */
         ErrorCode: string;
         BranchOperations: components["schemas"]["BranchResponse"] & components["schemas"]["OperationsResponse"];
+        BranchRecoverResponse: components["schemas"]["BranchResponse"] & components["schemas"]["EndpointsOptionalResponse"];
         EndpointOperations: components["schemas"]["EndpointResponse"] & components["schemas"]["OperationsResponse"];
         DatabaseOperations: components["schemas"]["DatabaseResponse"] & components["schemas"]["OperationsResponse"];
         RoleOperations: components["schemas"]["RoleResponse"] & components["schemas"]["OperationsResponse"];
@@ -5525,6 +5836,22 @@ export interface components {
             created_at: string;
             expires_at?: string;
             manual?: boolean;
+            /**
+             * Format: int64
+             * @description Full logical size of the snapshot in bytes at the time it was taken.
+             *
+             *     When absent, the logical size has not been calculated yet and the snapshot is not being charged.
+             *
+             *     When present, a value of 0 means the snapshot is not being charged.
+             */
+            full_size?: number;
+            /**
+             * Format: int64
+             * @description Incremental storage size in bytes since the previous scheduled snapshot, when the snapshot is billed on incremental (diff) usage.
+             *
+             *     When absent, either the incremental size has not been calculated yet and the snapshot is not being charged, or the snapshot is charged at full logical size (in that case `full_size` is set).
+             */
+            diff_size?: number;
         };
         SnapshotUpdateRequest: {
             snapshot: {
@@ -6244,30 +6571,6 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["ProjectResponse"] & components["schemas"]["OperationsResponse"];
-                };
-            };
-            default: components["responses"]["GeneralError"];
-        };
-    };
-    restoreProject: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description The Neon project ID */
-                project_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Returned the restored project */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ProjectRecoverResponse"];
                 };
             };
             default: components["responses"]["GeneralError"];
@@ -7770,6 +8073,122 @@ export interface operations {
             default: components["responses"]["GeneralError"];
         };
     };
+    updateNeonAuthConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Neon project ID */
+                project_id: string;
+                /** @description The Neon branch ID */
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NeonAuthConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description The auth configuration has been updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NeonAuthConfigResponse"];
+                };
+            };
+            default: components["responses"]["GeneralError"];
+        };
+    };
+    updateNeonAuthMagicLinkPlugin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Neon project ID */
+                project_id: string;
+                /** @description The Neon branch ID */
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NeonAuthMagicLinkConfigUpdate"];
+            };
+        };
+        responses: {
+            /** @description The magic link plugin configuration has been updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NeonAuthMagicLinkConfig"];
+                };
+            };
+            default: components["responses"]["GeneralError"];
+        };
+    };
+    getNeonAuthPhoneNumberPlugin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Neon project ID */
+                project_id: string;
+                /** @description The Neon branch ID */
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Returns the phone number plugin configuration */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NeonAuthPhoneNumberConfig"];
+                };
+            };
+            default: components["responses"]["GeneralError"];
+        };
+    };
+    updateNeonAuthPhoneNumberPlugin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Neon project ID */
+                project_id: string;
+                /** @description The Neon branch ID */
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NeonAuthPhoneNumberConfig"];
+            };
+        };
+        responses: {
+            /** @description The phone number plugin configuration has been updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NeonAuthPhoneNumberConfig"];
+                };
+            };
+            default: components["responses"]["GeneralError"];
+        };
+    };
     getNeonAuthWebhookConfig: {
         parameters: {
             query?: never;
@@ -7839,6 +8258,13 @@ export interface operations {
                 sort_order?: components["parameters"]["SortOrderParam"];
                 /** @description The maximum number of records to be returned in the response */
                 limit?: components["parameters"]["LimitParam"];
+                /**
+                 * @description If true, return recoverable deleted branches too (soft-deleted within the recovery window).
+                 *     If false or not provided, return only active (non-deleted) branches.
+                 *
+                 *     This parameter is part of the Branch Recovery feature, which is in preview and not available to all users.
+                 */
+                include_deleted?: boolean;
             };
             header?: never;
             path: {
@@ -8075,7 +8501,15 @@ export interface operations {
     };
     deleteProjectBranch: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description If true, the branch is permanently deleted immediately without a recovery window.
+                 *     If false (default), the branch can be recovered within 7 days via the recover endpoint.
+                 *
+                 *     This parameter is part of the Branch Recovery feature, which is in preview and not available to all users.
+                 */
+                hard_delete?: boolean;
+            };
             header?: never;
             path: {
                 /** @description The Neon project ID */
@@ -8478,6 +8912,32 @@ export interface operations {
                      *     }
                      */
                     "application/json": components["schemas"]["BranchOperations"];
+                };
+            };
+            default: components["responses"]["GeneralError"];
+        };
+    };
+    recoverProjectBranch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Neon project ID */
+                project_id: string;
+                /** @description The branch ID */
+                branch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Recovered the specified branch */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BranchRecoverResponse"];
                 };
             };
             default: components["responses"]["GeneralError"];
@@ -10230,12 +10690,13 @@ export interface operations {
                  *     - `public_network_transfer_bytes`
                  *     - `private_network_transfer_bytes`
                  *     - `extra_branches_month`
+                 *     - `snapshot_storage_bytes_month`
                  *
                  *     A list of metrics can be specified as an array of parameter values or as a comma-separated list in a single parameter value.
                  *     - As an array of parameter values: `metrics=compute_unit_seconds&metrics=extra_branches_month`
                  *     - As a comma-separated list in a single parameter value: `metrics=compute_unit_seconds,extra_branches_month`
                  */
-                metrics?: components["schemas"]["ConsumptionHistoryQueryMetrics"];
+                metrics: components["schemas"]["ConsumptionHistoryQueryMetrics"];
             };
             header?: never;
             path?: never;
@@ -10252,7 +10713,7 @@ export interface operations {
                     "application/json": components["schemas"]["ConsumptionHistoryPerProjectV2Response"] & components["schemas"]["PaginationResponse"];
                 };
             };
-            /** @description This endpoint is not available. It is only supported with Scale, Business, and Enterprise plan accounts. */
+            /** @description This endpoint is not available. It is only supported with Launch, Scale, Business, and Enterprise plan accounts. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -10432,9 +10893,94 @@ export interface operations {
             default: components["responses"]["GeneralError"];
         };
     };
-    getOrganizationMembers: {
+    getOrganizationSpendingLimit: {
         parameters: {
             query?: never;
+            header?: never;
+            path: {
+                /** @description The Neon organization ID */
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The organization's current spending limit. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpendingLimitResponse"];
+                };
+            };
+            default: components["responses"]["GeneralError"];
+        };
+    };
+    setOrganizationSpendingLimit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Neon organization ID */
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SpendingLimitUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description The updated spending limit value. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpendingLimitResponse"];
+                };
+            };
+            default: components["responses"]["GeneralError"];
+        };
+    };
+    deleteOrganizationSpendingLimit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The Neon organization ID */
+                org_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The spending limit has been cleared. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmptyResponse"];
+                };
+            };
+            default: components["responses"]["GeneralError"];
+        };
+    };
+    getOrganizationMembers: {
+        parameters: {
+            query?: {
+                /** @description Sort the members by the specified field. Defaults to `joined_at`. */
+                sort_by?: "email" | "role" | "joined_at";
+                /** @description A cursor to use in pagination. A cursor defines your place in the data list. Include `response.pagination.next` in subsequent API calls to fetch next page of the list. */
+                cursor?: components["parameters"]["CursorParam"];
+                /** @description Defines the sorting order of entities. */
+                sort_order?: components["parameters"]["SortOrderParam"];
+                /** @description The maximum number of members to return in the response */
+                limit?: number;
+            };
             header?: never;
             path: {
                 /** @description The Neon organization ID */
@@ -10477,10 +11023,15 @@ export interface operations {
                      *             "email": "user2@email.com"
                      *           }
                      *         }
-                     *       ]
+                     *       ],
+                     *       "pagination": {
+                     *         "next": "eyJtZW1iZXJfaWQiOiI1ZmVlMTNhYy05NTdiLTQwY2QtOGRlMC00ZDQ5NGNjMjhlMjgiLCJzb3J0X2J5Ijoiam9pbmVkX2F0In0=",
+                     *         "sort_by": "joined_at",
+                     *         "sort_order": "desc"
+                     *       }
                      *     }
                      */
-                    "application/json": components["schemas"]["OrganizationMembersResponse"];
+                    "application/json": components["schemas"]["OrganizationMembersResponse"] & components["schemas"]["CursorPaginationResponse"];
                 };
             };
             default: components["responses"]["GeneralError"];
@@ -10857,7 +11408,13 @@ export interface operations {
     };
     getActiveRegions: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description Organization ID. When provided, returns only regions available to this organization.
+                 *     Recommended for accurate region availability.
+                 */
+                org_id?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
