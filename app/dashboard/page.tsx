@@ -75,10 +75,10 @@ async function OverviewMetrics({
 
   const projects = result.data?.projects ?? []
   const plan = detectPlanFromConsumption(projects)
-  const { daily, totals, dayCount } = aggregateConsumption(projects, plan)
+  const { daily, totals, billableTotals, dayCount } = aggregateConsumption(projects, plan)
   const hoursInPeriod = dayCount * 24
   const totalCost = METRICS.reduce(
-    (sum, metric) => sum + metric.calculateCost(totals[metric.totalsKey], plan),
+    (sum, metric) => sum + metric.calculateCost(billableTotals[metric.totalsKey], plan),
     0,
   )
 
@@ -102,7 +102,7 @@ async function OverviewMetrics({
             key={metric.dailyKey}
             title={metric.label}
             value={metric.formatDisplayValue(totals[metric.totalsKey], hoursInPeriod)}
-            cost={formatCurrency(metric.calculateCost(totals[metric.totalsKey], plan))}
+            cost={formatCurrency(metric.calculateCost(billableTotals[metric.totalsKey], plan))}
           />
         ))}
         {/* Extra Branches kept explicit: subtitle needs totals.total_branch_hours
@@ -111,7 +111,7 @@ async function OverviewMetrics({
           title="Extra Branches"
           value={formatBranchMonths(totals.billable_extra_branch_hours)}
           subtitle={formatBranchHours(totals.total_branch_hours) + " total (all child branches)"}
-          cost={formatCurrency(calculateExtraBranchesCost(totals.billable_extra_branch_hours, plan))}
+          cost={formatCurrency(calculateExtraBranchesCost(billableTotals.billable_extra_branch_hours, plan))}
         />
       </div>
 

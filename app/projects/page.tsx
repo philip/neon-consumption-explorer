@@ -172,7 +172,7 @@ async function ProjectsContent({
 
     const project = consumptionMap.get(projectId)
     if (project) {
-      const { totals, dayCount } = aggregateProjectMetrics(project, plan)
+      const { totals, billableTotals, dayCount } = aggregateProjectMetrics(project, plan)
       row.compute = totals.compute
       row.publicTransfer = totals.publicTransfer
       row.privateTransfer = totals.privateTransfer
@@ -182,7 +182,7 @@ async function ProjectsContent({
       )
       row.extraBranches = totals.extraBranches
       row.estimatedCost = METRICS.reduce(
-        (sum, metric) => sum + metric.calculateCost(totals[metric.dailyKey], plan),
+        (sum, metric) => sum + metric.calculateCost(billableTotals[metric.dailyKey], plan),
         0,
       )
       return row

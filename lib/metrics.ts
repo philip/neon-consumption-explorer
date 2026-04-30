@@ -72,6 +72,23 @@ export type MetricDef = {
    * (e.g. allowance deduction for extraBranches). Accumulation stays explicit in consumption.ts.
    */
   customAggregation?: true
+  /**
+   * If set, data points whose date is before this ISO date are excluded from
+   * cost calculation (metric was free/beta before this date). Usage display
+   * is unaffected. ISO 8601 lex compare works for both `timeframe_start`
+   * timestamps and chart `date` strings.
+   */
+  billingStartDate?: string
+}
+
+/**
+ * True if the metric is billable on the given date. Metrics without a
+ * `billingStartDate` are billable on every date. Used by aggregators (with
+ * `timeframe_start`), the cost-mode chart helper (with `date`), and the
+ * `PaidPlanGuide` to keep the launch-date logic in one place.
+ */
+export function isMetricBillable(def: MetricDef, isoDate: string): boolean {
+  return !def.billingStartDate || isoDate >= def.billingStartDate
 }
 
 /**
@@ -146,6 +163,7 @@ export const METRICS: MetricDef[] = [
   },
   {
     apiName: "snapshot_storage_bytes_month",
+    billingStartDate: "2026-05-01",
     dailyKey: "storageSnapshot",
     totalsKey: "snapshot_storage_byte_hours",
     rateKey: "snapshotsPerGBMonth",

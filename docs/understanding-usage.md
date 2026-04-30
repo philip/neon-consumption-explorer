@@ -115,6 +115,8 @@ Repeat for each day in the billing period and sum the billable branch-hours acro
 
 ### Snapshots
 
+> **Note**: Snapshot billing began on 2026-05-01. The consumption history may report `snapshot_storage_bytes_month` for earlier dates (during the beta period); those values are not charged.
+
 The `snapshot_storage_bytes_month` metric reports byte-hours for **manual** snapshots and **scheduled** (recurring) snapshots. Manual snapshots and the **first** scheduled snapshot of a branch are billed on full logical size. **Subsequent** scheduled snapshots are billed incrementally — only the diff since the previous scheduled snapshot. The consumption metric folds both billing modes together, so summing `snapshot_storage_bytes_month` across days, dividing by 744 and 1000000000, and multiplying by the snapshot rate gives the total snapshot cost.
 
 To inspect individual snapshots, the [List project snapshots](https://api-docs.neon.tech/reference/listsnapshots) endpoint returns a `full_size` or `diff_size` (bytes) per snapshot, depending on which billing mode applies. See [Backup & restore](/docs/guides/backup-restore#snapshot-size-fields-in-api-responses) for details on when each field is present.

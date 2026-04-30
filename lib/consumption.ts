@@ -1,7 +1,7 @@
 import { billableBranchHours } from "@/lib/pricing"
 import type { ConsumptionMetrics } from "@/lib/types"
 import type { Plan } from "@/lib/plans"
-import { METRICS, METRIC_BY_API_NAME, type MetricKey } from "@/lib/metrics"
+import { METRICS, METRIC_BY_API_NAME, isMetricBillable, type MetricKey } from "@/lib/metrics"
 import { type ConsumptionProject } from "@/lib/api"
 
 /** Assumes daily granularity — all API calls in this app use granularity=daily. */
@@ -15,14 +15,28 @@ export type DailyDataPoint = { date: string } & Record<MetricKey, number>
 /**
  * Aggregate V2 consumption history across all projects into daily data points
  * and running totals. Used by the dashboard overview and project time-series.
+ *
+ * Returns two parallel period-totals:
+ * - `totals`: full unfiltered usage (for display: GB-mo, CU-hr, bytes, etc.).
+ * - `billableTotals`: same shape, but excludes contributions from dates before
+ *   each metric's `billingStartDate`. Use this for any cost calculation.
  */
 export function aggregateConsumption(
   projects: ProjectConsumption[],
   plan: Plan,
-): { daily: DailyDataPoint[]; totals: ConsumptionMetrics; dayCount: number } {
+): {
+  daily: DailyDataPoint[]
+  totals: ConsumptionMetrics
+  billableTotals: ConsumptionMetrics
+  dayCount: number
+} {
   const dailyMap: Record<string, DailyDataPoint> = {}
 
   const totals: ConsumptionMetrics = {
+    ...Object.fromEntries(METRICS.map((m) => [m.totalsKey, 0])),
+    total_branch_hours: 0,
+  } as ConsumptionMetrics
+  const billableTotals: ConsumptionMetrics = {
     ...Object.fromEntries(METRICS.map((m) => [m.totalsKey, 0])),
     total_branch_hours: 0,
   } as ConsumptionMetrics
@@ -45,6 +59,9 @@ export function aggregateConsumption(
             // Standard metric: accumulate into daily point and period totals.
             d[def.dailyKey] += m.value
             totals[def.totalsKey] += m.value
+            if (isMetricBillable(def, key)) {
+              billableTotals[def.totalsKey] += m.value
+            }
           } else if (m.metric_name === "extra_branches_month") {
             // Custom aggregation: allowance deduction happens after the inner loop.
             rawBranchHoursForProject += m.value
@@ -54,6 +71,8 @@ export function aggregateConsumption(
         d.extraBranches += billable
         totals.total_branch_hours += rawBranchHoursForProject
         totals.billable_extra_branch_hours += billable
+        billableTotals.total_branch_hours += rawBranchHoursForProject
+        billableTotals.billable_extra_branch_hours += billable
       }
     }
   }
@@ -62,19 +81,27 @@ export function aggregateConsumption(
     (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   )
 
-  return { daily, totals, dayCount: daily.length }
+  return { daily, totals, billableTotals, dayCount: daily.length }
 }
 
 /**
  * Aggregate per-project consumption into per-metric totals.
  * `totals` keys match MetricKey (same as DailyDataPoint).
  * `extraBranches` stores billable branch-hours (after plan allowance deduction).
+ *
+ * Returns two parallel records: `totals` (unfiltered, for display) and
+ * `billableTotals` (filtered by each metric's `billingStartDate`, for cost).
  */
 export function aggregateProjectMetrics(
   project: ProjectConsumption,
   plan: Plan,
-): { totals: Record<MetricKey, number>; dayCount: number } {
+): {
+  totals: Record<MetricKey, number>
+  billableTotals: Record<MetricKey, number>
+  dayCount: number
+} {
   const totals = Object.fromEntries(METRICS.map((m) => [m.dailyKey, 0])) as Record<MetricKey, number>
+  const billableTotals = Object.fromEntries(METRICS.map((m) => [m.dailyKey, 0])) as Record<MetricKey, number>
   const days = new Set<string>()
 
   for (const period of project.periods) {
@@ -85,13 +112,18 @@ export function aggregateProjectMetrics(
         const def = METRIC_BY_API_NAME.get(m.metric_name)
         if (def && !def.customAggregation) {
           totals[def.dailyKey] += m.value
+          if (isMetricBillable(def, day.timeframe_start)) {
+            billableTotals[def.dailyKey] += m.value
+          }
         } else if (m.metric_name === "extra_branches_month") {
           dailyBranchHours += m.value
         }
       }
-      totals.extraBranches += billableBranchHours(dailyBranchHours, HOURS_PER_DAY, plan)
+      const billable = billableBranchHours(dailyBranchHours, HOURS_PER_DAY, plan)
+      totals.extraBranches += billable
+      billableTotals.extraBranches += billable
     }
   }
 
-  return { totals, dayCount: days.size }
+  return { totals, billableTotals, dayCount: days.size }
 }

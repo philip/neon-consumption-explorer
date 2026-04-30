@@ -24,6 +24,9 @@ import { MetricExplainer } from "@/components/metric-explainer"
 import { CurlBlock } from "@/components/curl-block"
 import { ConsumptionFieldCard } from "@/components/consumption-field-card"
 import type { ProjectConsumption } from "@/lib/consumption"
+import { METRIC_BY_API_NAME, isMetricBillable } from "@/lib/metrics"
+
+const SNAPSHOT_METRIC = METRIC_BY_API_NAME.get("snapshot_storage_bytes_month")!
 
 export function PaidPlanGuide({
   projects,
@@ -44,6 +47,8 @@ export function PaidPlanGuide({
   let childStorageBH = 0
   let pitrBH = 0
   let snapshotBH = 0
+  // Cost-only accumulator for snapshots: excludes pre-launch beta dates.
+  let snapshotBillableBH = 0
   let publicTransfer = 0
   let privateTransfer = 0
   let totalBillableBranchHours = 0
@@ -69,6 +74,9 @@ export function PaidPlanGuide({
               break
             case "snapshot_storage_bytes_month":
               snapshotBH += m.value
+              if (isMetricBillable(SNAPSHOT_METRIC, day.timeframe_start)) {
+                snapshotBillableBH += m.value
+              }
               break
             case "public_network_transfer_bytes":
               publicTransfer += m.value
@@ -94,7 +102,8 @@ export function PaidPlanGuide({
   const rootStorageCost = calculateStorageCost(rootStorageBH, plan)
   const childStorageCost = calculateStorageCost(childStorageBH, plan)
   const pitrCost = calculateInstantRestoreCost(pitrBH, plan)
-  const snapshotCost = calculateSnapshotStorageCost(snapshotBH, plan)
+  const snapshotCost = calculateSnapshotStorageCost(snapshotBillableBH, plan)
+  const snapshotHasPreLaunchUsage = snapshotBH > 0 && snapshotBillableBH < snapshotBH
   const pubTransferCost = calculatePublicTransferCost(publicTransfer, plan)
   const privTransferCost = calculatePrivateTransferCost(privateTransfer, plan)
   const branchCost = calculateExtraBranchesCost(totalBillableBranchHours, plan)
@@ -196,7 +205,10 @@ granularity=${billingPeriod.granularity}`
             `Manual snapshots and the first scheduled snapshot contribute their full logical size.`,
             `Subsequent scheduled snapshots contribute only the diff since the previous one.`,
             `Convert to GB-months: byte-hours ÷ 744 hrs ÷ 1,000,000,000 = ${formatGBMonths(snapshotBH)}.`,
-            `Cost: ${formatGBMonths(snapshotBH)} × $${pricing.snapshotsPerGBMonth}/GB-mo`,
+            `Cost: ${formatGBMonths(snapshotBillableBH)} × $${pricing.snapshotsPerGBMonth}/GB-mo`,
+            ...(snapshotHasPreLaunchUsage
+              ? [`Note: snapshots became billable on ${SNAPSHOT_METRIC.billingStartDate}. Pre-launch usage (${formatGBMonths(snapshotBH - snapshotBillableBH)}) is shown above but not charged.`]
+              : []),
           ].join("\n")}
           cost={formatCurrency(snapshotCost)}
           curl={`${curlBase}&metrics=snapshot_storage_bytes_month&limit=100" \\

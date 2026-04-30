@@ -35,7 +35,7 @@ export async function CostBreakdown({
   const project = projects[0]
   if (!project) return null
 
-  const { totals } = aggregateProjectMetrics(project, plan)
+  const { totals, billableTotals } = aggregateProjectMetrics(project, plan)
   const planConfig = getPlan(plan)
   const { rates } = planConfig
   const avgCU = activeTimeSeconds != null
@@ -52,8 +52,8 @@ export async function CostBreakdown({
       // (projectGB / orgTotalGB × billableGB × rate) would be more accurate
       // but requires fetching all projects' consumption on this page.
       cost: isPublicTransfer
-        ? calculatePublicTransferCostRaw(totals[metric.dailyKey], plan)
-        : metric.calculateCost(totals[metric.dailyKey], plan),
+        ? calculatePublicTransferCostRaw(billableTotals[metric.dailyKey], plan)
+        : metric.calculateCost(billableTotals[metric.dailyKey], plan),
       rate: formatRate(rates[metric.rateKey], metric.rateUnit),
       note: isPublicTransfer && planConfig.allowances.publicTransferGB > 0
         ? `before ${planConfig.allowances.publicTransferGB} GB org-wide allowance`
